@@ -24,18 +24,33 @@ struct RecordView: View {
     private var isRecording: Bool { viewModel.isRecording }
 
     var body: some View {
-        VStack(spacing: 0) {
-            switch phase {
-            case .idle:
-                idleLayout
-            case .recording:
-                recordingLayout
-            case .recorded(let rVM):
-                recordedLayout(rVM)
-            case .enhancing(let rVM):
-                enhancingLayout(rVM)
-            case .studio(let rVM):
-                studioLayout(rVM)
+        ZStack {
+            // Hero Dynamic Mesh Backgrounds
+            if case .idle = phase {
+                FluidBackground(colors: [.purple, .indigo, .pink])
+                    .transition(.opacity)
+            } else if case .recording = phase {
+                FluidBackground(colors: [.red, .orange, .pink])
+                    .transition(.opacity)
+            } else if case .studio(let rVM) = phase {
+                FluidBackground(colors: toneColors(rVM.selectedPreset))
+                    .opacity(0.2)
+                    .transition(.opacity)
+            }
+            
+            VStack(spacing: 0) {
+                switch phase {
+                case .idle:
+                    idleLayout
+                case .recording:
+                    recordingLayout
+                case .recorded(let rVM):
+                    recordedLayout(rVM)
+                case .enhancing(let rVM):
+                    enhancingLayout(rVM)
+                case .studio(let rVM):
+                    studioLayout(rVM)
+                }
             }
         }
         .frame(maxWidth: Spacing.contentMaxWidth)
@@ -276,10 +291,15 @@ struct RecordView: View {
                                 }
                                 .frame(width: 80, height: 80)
                                 .foregroundStyle(isSelected ? Color.white : Color.primary)
-                                .background(isSelected ? Color.accentColor : Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                                .background(
+                                    isSelected
+                                        ? AnyShapeStyle(LinearGradient(colors: toneColors(preset), startPoint: .topLeading, endPoint: .bottomTrailing))
+                                        : AnyShapeStyle(Color(.secondarySystemGroupedBackground)),
+                                    in: RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                )
                                 .overlay(
                                     RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                        .stroke(isSelected ? Color.accentColor : Color(.separator), lineWidth: 0.5)
+                                        .stroke(isSelected ? Color.clear : Color(.separator), lineWidth: 0.5)
                                 )
                             }
                             .buttonStyle(.plain)
