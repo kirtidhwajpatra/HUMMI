@@ -6,8 +6,19 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXContainerItemProxy section */
+		781726072FFA800000BB51DC /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 781725A92FFA779E00BB51DC /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 781725B02FFA779E00BB51DC;
+			remoteInfo = HUMMI;
+		};
+/* End PBXContainerItemProxy section */
+
 /* Begin PBXFileReference section */
 		781725B12FFA779E00BB51DC /* HUMMI.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = HUMMI.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		781726012FFA800000BB51DC /* HUMMITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = HUMMITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -16,10 +27,22 @@
 			path = HUMMI;
 			sourceTree = "<group>";
 		};
+		781726022FFA800000BB51DC /* HUMMITests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = HUMMITests;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		781725AE2FFA779E00BB51DC /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		781726042FFA800000BB51DC /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -33,6 +56,7 @@
 			isa = PBXGroup;
 			children = (
 				781725B32FFA779E00BB51DC /* HUMMI */,
+				781726022FFA800000BB51DC /* HUMMITests */,
 				781725B22FFA779E00BB51DC /* Products */,
 			);
 			sourceTree = "<group>";
@@ -41,6 +65,7 @@
 			isa = PBXGroup;
 			children = (
 				781725B12FFA779E00BB51DC /* HUMMI.app */,
+				781726012FFA800000BB51DC /* HUMMITests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -70,6 +95,29 @@
 			productReference = 781725B12FFA779E00BB51DC /* HUMMI.app */;
 			productType = "com.apple.product-type.application";
 		};
+		781726062FFA800000BB51DC /* HUMMITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 7817260B2FFA800000BB51DC /* Build configuration list for PBXNativeTarget "HUMMITests" */;
+			buildPhases = (
+				781726032FFA800000BB51DC /* Sources */,
+				781726042FFA800000BB51DC /* Frameworks */,
+				781726052FFA800000BB51DC /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				781726082FFA800000BB51DC /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				781726022FFA800000BB51DC /* HUMMITests */,
+			);
+			name = HUMMITests;
+			packageProductDependencies = (
+			);
+			productName = HUMMITests;
+			productReference = 781726012FFA800000BB51DC /* HUMMITests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -82,6 +130,10 @@
 				TargetAttributes = {
 					781725B02FFA779E00BB51DC = {
 						CreatedOnToolsVersion = 26.0.1;
+					};
+					781726062FFA800000BB51DC = {
+						CreatedOnToolsVersion = 26.0.1;
+						TestTargetID = 781725B02FFA779E00BB51DC;
 					};
 				};
 			};
@@ -100,12 +152,20 @@
 			projectRoot = "";
 			targets = (
 				781725B02FFA779E00BB51DC /* HUMMI */,
+				781726062FFA800000BB51DC /* HUMMITests */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
 		781725AF2FFA779E00BB51DC /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		781726052FFA800000BB51DC /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -122,7 +182,22 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		781726032FFA800000BB51DC /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		781726082FFA800000BB51DC /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 781725B02FFA779E00BB51DC /* HUMMI */;
+			targetProxy = 781726072FFA800000BB51DC /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		781725BA2FFA77A000BB51DC /* Debug */ = {
@@ -254,8 +329,10 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 8XU7G4WPRA;
+				ENABLE_DEBUG_DYLIB = NO;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "StudioVocals needs the microphone to record your singing.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -288,6 +365,7 @@
 				DEVELOPMENT_TEAM = 8XU7G4WPRA;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "StudioVocals needs the microphone to record your singing.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -310,6 +388,48 @@
 			};
 			name = Release;
 		};
+		781726092FFA800000BB51DC /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 8XU7G4WPRA;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.kirtidhwaj.HUMMITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/HUMMI.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/HUMMI";
+			};
+			name = Debug;
+		};
+		7817260A2FFA800000BB51DC /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 8XU7G4WPRA;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.kirtidhwaj.HUMMITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/HUMMI.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/HUMMI";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -327,6 +447,15 @@
 			buildConfigurations = (
 				781725BD2FFA77A000BB51DC /* Debug */,
 				781725BE2FFA77A000BB51DC /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		7817260B2FFA800000BB51DC /* Build configuration list for PBXNativeTarget "HUMMITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				781726092FFA800000BB51DC /* Debug */,
+				7817260A2FFA800000BB51DC /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

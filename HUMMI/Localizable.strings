@@ -1,0 +1,36 @@
+/* Onboarding — shared */
+"onboarding.continue" = "Continue";
+"onboarding.continue.hint" = "Double tap to continue";
+"onboarding.back" = "Back";
+"onboarding.skip" = "Skip";
+"onboarding.skip.hint" = "Skips the intro and goes to recording";
+"onboarding.step" = "Step %1$d of %2$d";
+
+/* Onboarding — Screen 1: value promise */
+"onboarding.screen1.headline" = "Sound studio in one tap";
+"onboarding.screen1.subhead" = "Turn any phone recording into a professional vocal — right on your device.";
+"onboarding.screen1.before" = "Before";
+"onboarding.screen1.after" = "After";
+"onboarding.demo.playingBefore" = "Playing before";
+"onboarding.demo.playingAfter" = "Playing after";
+"onboarding.demo.label" = "Before and after audio demo";
+
+/* Onboarding — Screen 2: recording tip */
+"onboarding.screen2.headline" = "Get the best sound";
+"onboarding.screen2.illustration" = "A person singing into a phone held about twenty centimeters away";
+"onboarding.screen2.tip.quiet" = "Find a quiet room";
+"onboarding.screen2.tip.distance" = "Hold your phone ~20 cm from your mouth";
+"onboarding.screen2.tip.earphones" = "Wear earphones while recording";
+
+/* Onboarding — Screen 3: microphone permission */
+"onboarding.screen3.headline" = "One thing first";
+"onboarding.screen3.body" = "StudioVocals needs your microphone to record your singing. Your audio never leaves your device — processing happens entirely on your iPhone.";
+"onboarding.screen3.badge.private" = "Private";
+"onboarding.screen3.badge.ondevice" = "On-device";
+"onboarding.screen3.badge.noupload" = "No upload";
+"onboarding.screen3.enable" = "Enable microphone";
+"onboarding.screen3.enable.hint" = "Double tap to allow microphone access";
+"onboarding.screen3.denied.title" = "Microphone access is off";
+"onboarding.screen3.denied.body" = "You can turn it on in Settings, or continue and enable it later.";
+"onboarding.screen3.openSettings" = "Open Settings";
+"onboarding.screen3.continueAnyway" = "Continue anyway";

@@ -11,7 +11,8 @@ import SwiftUI
 struct HUMMIApp: App {
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            AppRootView()
+                .tint(.accentColor)
         }
     }
 }
