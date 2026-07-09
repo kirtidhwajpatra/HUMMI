@@ -24,33 +24,18 @@ struct RecordView: View {
     private var isRecording: Bool { viewModel.isRecording }
 
     var body: some View {
-        ZStack {
-            // Hero Dynamic Mesh Backgrounds
-            if case .idle = phase {
-                FluidBackground(colors: [.purple, .indigo, .pink])
-                    .transition(.opacity)
-            } else if case .recording = phase {
-                FluidBackground(colors: [.red, .orange, .pink])
-                    .transition(.opacity)
-            } else if case .studio(let rVM) = phase {
-                FluidBackground(colors: toneColors(rVM.selectedPreset))
-                    .opacity(0.2)
-                    .transition(.opacity)
-            }
-            
-            VStack(spacing: 0) {
-                switch phase {
-                case .idle:
-                    idleLayout
-                case .recording:
-                    recordingLayout
-                case .recorded(let rVM):
-                    recordedLayout(rVM)
-                case .enhancing(let rVM):
-                    enhancingLayout(rVM)
-                case .studio(let rVM):
-                    studioLayout(rVM)
-                }
+        VStack(spacing: 0) {
+            switch phase {
+            case .idle:
+                idleLayout
+            case .recording:
+                recordingLayout
+            case .recorded(let rVM):
+                recordedLayout(rVM)
+            case .enhancing(let rVM):
+                enhancingLayout(rVM)
+            case .studio(let rVM):
+                studioLayout(rVM)
             }
         }
         .frame(maxWidth: Spacing.contentMaxWidth)

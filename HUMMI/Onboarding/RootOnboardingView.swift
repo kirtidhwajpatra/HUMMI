@@ -33,36 +33,30 @@ struct RootOnboardingView: View {
     }
 
     var body: some View {
-        ZStack {
-            FluidBackground(colors: [.indigo, .blue, .cyan])
-                .opacity(0.3)
-                .ignoresSafeArea()
+        VStack(spacing: 0) {
+            StepIndicator(count: 3, activeIndex: page)
+                .padding(.top, Spacing.m)
+                .padding(.bottom, Spacing.xs)
 
-            VStack(spacing: 0) {
-                StepIndicator(count: 3, activeIndex: page)
-                    .padding(.top, Spacing.m)
-                    .padding(.bottom, Spacing.xs)
-    
-                TabView(selection: $page) {
-                    OnboardingValueScreen(
-                        isActive: page == 0,
-                        onContinue: { advance(to: 1) },
-                        onSkip: onFinish)
-                        .tag(0)
-    
-                    OnboardingTipScreen(
-                        onContinue: {
-                            canReachPermission = true
-                            advance(to: 2)
-                        },
-                        onBack: { advance(to: 0) })
-                        .tag(1)
-    
-                    OnboardingPermissionScreen(onComplete: onFinish)
-                        .tag(2)
-                }
-                .tabViewStyle(.page(indexDisplayMode: .never))
+            TabView(selection: $page) {
+                OnboardingValueScreen(
+                    isActive: page == 0,
+                    onContinue: { advance(to: 1) },
+                    onSkip: onFinish)
+                    .tag(0)
+
+                OnboardingTipScreen(
+                    onContinue: {
+                        canReachPermission = true
+                        advance(to: 2)
+                    },
+                    onBack: { advance(to: 0) })
+                    .tag(1)
+
+                OnboardingPermissionScreen(onComplete: onFinish)
+                    .tag(2)
             }
+            .tabViewStyle(.page(indexDisplayMode: .never))
         }
         .background(Color(.systemBackground))
         .sensoryFeedback(Haptic.toggle, trigger: continueTick)

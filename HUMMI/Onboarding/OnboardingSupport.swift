@@ -46,8 +46,6 @@ struct OnboardingLayout<Content: View, Actions: View>: View {
                     .frame(maxWidth: .infinity)
                     .padding(.horizontal, Spacing.l)
                     .padding(.vertical, Spacing.xl)
-                    .background(Color(.secondarySystemGroupedBackground).opacity(0.8), in: RoundedRectangle(cornerRadius: Radius.sheet, style: .continuous))
-                    .padding(Spacing.m)
             }
             VStack(spacing: Spacing.s) { actions() }
                 .frame(maxWidth: Spacing.contentMaxWidth)
