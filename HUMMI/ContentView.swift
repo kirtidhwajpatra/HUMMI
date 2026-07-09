@@ -49,7 +49,6 @@ struct ContentView: View {
     var body: some View {
         NavigationStack(path: $path) {
             sessionContent
-                .toolbar(.hidden, for: .navigationBar)
                 .navigationDestination(for: AppRoute.self) { route in
                     switch route {
                     case .library:

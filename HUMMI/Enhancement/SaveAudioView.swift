@@ -49,7 +49,7 @@ struct SaveAudioView: View {
                     onOpenPlaylist()
                 } label: {
                     HStack(spacing: Spacing.xxs) {
-                        PlaylistIcon(width: 16)
+                        Image(systemName: "list.bullet")
                         Text("Playlist")
                     }
                     .foregroundStyle(.secondary)
@@ -86,23 +86,30 @@ struct SaveAudioView: View {
 
     private var exportButtons: some View {
         VStack(spacing: Spacing.s) {
-            PrimaryCTA(
-                title: "Save Audio",
-                systemImage: "arrow.down.document",
-                isLoading: viewModel.isExporting && viewModel.videoProgress == nil
-            ) {
+            Button {
                 Task { await viewModel.saveAudio() }
+            } label: {
+                if viewModel.isExporting && viewModel.videoProgress == nil {
+                    ProgressView()
+                } else {
+                    Label("Save Audio", systemImage: "arrow.down.document")
+                }
             }
+            .buttonStyle(.borderedProminent)
+            .controlSize(.large)
             .disabled(viewModel.isExporting)
 
-            PrimaryCTA(
-                title: "Share Video",
-                systemImage: "square.and.arrow.up",
-                isLoading: viewModel.videoProgress != nil,
-                isSecondary: true
-            ) {
+            Button {
                 Task { await viewModel.shareVideo() }
+            } label: {
+                if viewModel.videoProgress != nil {
+                    ProgressView()
+                } else {
+                    Label("Share Video", systemImage: "square.and.arrow.up")
+                }
             }
+            .buttonStyle(.bordered)
+            .controlSize(.large)
             .disabled(viewModel.isExporting)
 
             if let progress = viewModel.videoProgress {

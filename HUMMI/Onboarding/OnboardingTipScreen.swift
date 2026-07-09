@@ -28,7 +28,7 @@ struct OnboardingTipScreen: View {
             }
 
             Text("onboarding.screen2.headline")
-                .font(.dsHeroTitleCompact)
+                .font(.largeTitle.weight(.bold))
                 .multilineTextAlignment(.center)
                 .accessibilityAddTraits(.isHeader)
                 .staggered(1, appeared: appeared)
@@ -40,15 +40,19 @@ struct OnboardingTipScreen: View {
             }
             .staggered(2, appeared: appeared)
         } actions: {
-            PrimaryCTA(title: NSLocalizedString("onboarding.continue", comment: ""),
-                       systemImage: "arrow.right") {
+            Button {
                 onContinue()
+            } label: {
+                Label(NSLocalizedString("onboarding.continue", comment: ""), systemImage: "arrow.right")
+                    .frame(maxWidth: .infinity)
             }
+            .buttonStyle(.borderedProminent)
+            .controlSize(.large)
             .accessibilityHint(Text("onboarding.continue.hint"))
 
             Button(action: onBack) {
                 Text("onboarding.back")
-                    .font(.dsCallout)
+                    .font(.callout)
                     .frame(maxWidth: .infinity, minHeight: 44)
             }
         }
@@ -75,7 +79,7 @@ struct OnboardingTipScreen: View {
 
     private func bullet(symbol: String, textKey: LocalizedStringKey) -> some View {
         Label {
-            Text(textKey).font(.dsBody)
+            Text(textKey).font(.body)
         } icon: {
             Image(systemName: symbol)
                 .symbolRenderingMode(.hierarchical)

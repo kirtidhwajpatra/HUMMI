@@ -72,30 +72,13 @@ struct WaveformView: View {
         guard !bars.isEmpty else { return }
         let scale = 1 / max(bars.max() ?? 1, 0.05)
         let played = playedTint
-        let upcoming = Color(.systemGray4)
+        let upcoming = Color(.quaternaryLabel)
 
         for (index, peak) in bars.enumerated() {
             let x = CGFloat(index) * slot
+            let height = max(size.height * CGFloat(min(peak * scale, 1)), 3)
             
-            // Calculate dynamic magnification based on distance to the user's scrub touch focus
-            let barProgress = x / size.width
-            let magnification: CGFloat
-            if let focus {
-                let distance = abs(barProgress - focus)
-                if distance < 0.15 {
-                    magnification = 1.0 + (0.15 - distance) * 4.0 // Up to 1.6x height amplification
-                } else {
-                    magnification = 1.0
-                }
-            } else {
-                magnification = 1.0
-            }
-
-            let height = max(size.height * CGFloat(min(peak * scale, 1)) * magnification, 2)
-            
-            // Dynamically scale width slightly for the magnified bars under focus
-            let dynamicWidth = barWidth * min(magnification, 1.3)
-            let rect = CGRect(x: x, y: (size.height - height) / 2, width: dynamicWidth, height: height)
+            let rect = CGRect(x: x, y: (size.height - height) / 2, width: barWidth, height: height)
             
             let color: Color
             if let playhead {
@@ -103,17 +86,8 @@ struct WaveformView: View {
             } else {
                 color = tint
             }
-            let topColor = color
-            let bottomColor = color.opacity(0.4)
-            let path = Path(roundedRect: rect, cornerRadius: dynamicWidth / 2)
-            context.fill(
-                path,
-                with: .linearGradient(
-                    Gradient(colors: [topColor, bottomColor]),
-                    startPoint: CGPoint(x: rect.midX, y: rect.minY),
-                    endPoint: CGPoint(x: rect.midX, y: rect.maxY)
-                )
-            )
+            let path = Path(roundedRect: rect, cornerRadius: barWidth / 2)
+            context.fill(path, with: .color(color))
         }
     }
 

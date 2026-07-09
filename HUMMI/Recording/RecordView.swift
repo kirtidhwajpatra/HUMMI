@@ -24,28 +24,23 @@ struct RecordView: View {
     private var isRecording: Bool { viewModel.isRecording }
 
     var body: some View {
-        ZStack {
-            ambientGlow
-                .accessibilityHidden(true)
-
-            VStack(spacing: 0) {
-                switch phase {
-                case .idle:
-                    idleLayout
-                case .recording:
-                    recordingLayout
-                case .recorded(let rVM):
-                    recordedLayout(rVM)
-                case .enhancing(let rVM):
-                    enhancingLayout(rVM)
-                case .studio(let rVM):
-                    studioLayout(rVM)
-                }
+        VStack(spacing: 0) {
+            switch phase {
+            case .idle:
+                idleLayout
+            case .recording:
+                recordingLayout
+            case .recorded(let rVM):
+                recordedLayout(rVM)
+            case .enhancing(let rVM):
+                enhancingLayout(rVM)
+            case .studio(let rVM):
+                studioLayout(rVM)
             }
-            .frame(maxWidth: Spacing.contentMaxWidth)
-            .frame(maxWidth: .infinity)
-            .padding(.horizontal, Spacing.l)
         }
+        .frame(maxWidth: Spacing.contentMaxWidth)
+        .frame(maxWidth: .infinity)
+        .padding(.horizontal, Spacing.l)
         .animation(reduceMotion ? .none : Motion.standard, value: phase)
         .sensoryFeedback(trigger: isRecording) { _, recording in
             recording ? Haptic.recordStart : Haptic.recordStop
@@ -72,13 +67,7 @@ struct RecordView: View {
     // MARK: - Layouts
 
     private var idleLayout: some View {
-        VStack(spacing: 0) {
-            navBar(showLibrary: true)
-
-            Spacer(minLength: Spacing.l)
-
-            headline
-
+        VStack(spacing: Spacing.xl) {
             Spacer(minLength: Spacing.l)
 
             recordingSurface
@@ -90,22 +79,26 @@ struct RecordView: View {
             }
 
             notice
-
-            Spacer(minLength: Spacing.l)
-
-            importButton
-                .padding(.bottom, Spacing.xl)
+            
+            Spacer(minLength: Spacing.xl)
+        }
+        .navigationTitle("Record")
+        .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                Button { showImporter = true } label: {
+                    Image(systemName: "square.and.arrow.down")
+                }
+            }
+            ToolbarItem(placement: .topBarTrailing) {
+                NavigationLink(value: AppRoute.library) {
+                    Image(systemName: "list.bullet")
+                }
+            }
         }
     }
 
     private var recordingLayout: some View {
-        VStack(spacing: 0) {
-            navBar(showLibrary: false)
-
-            Spacer(minLength: Spacing.l)
-
-            recordingHeadline
-
+        VStack(spacing: Spacing.xl) {
             Spacer(minLength: Spacing.l)
 
             recordingSurface
@@ -117,80 +110,53 @@ struct RecordView: View {
             }
 
             notice
-
-            Spacer(minLength: Spacing.l)
-
-            // Hidden during recording to avoid distraction
-            Color.clear
-                .frame(height: 52)
-                .padding(.bottom, Spacing.xl)
+            
+            Spacer(minLength: Spacing.xl)
         }
+        .navigationTitle("Listening...")
     }
 
     private func recordedLayout(_ rVM: ResultViewModel) -> some View {
-        VStack(spacing: 0) {
-            HStack {
-                Button("Discard") {
-                    phase = .idle
-                }
-                .font(.body)
-                .foregroundStyle(.secondary)
-                .frame(minHeight: 48)
-
-                Spacer()
-            }
-            .padding(.top, Spacing.s)
-
-            Spacer(minLength: Spacing.l)
-
-            VStack(spacing: Spacing.xs) {
-                Text("Review your take")
-                    .font(.system(.title2, design: .default).weight(.semibold))
-                Text("Ready to enhance or record again.")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-            }
-            .multilineTextAlignment(.center)
-
-            Spacer(minLength: Spacing.xl)
-
+        VStack(spacing: Spacing.xl) {
+            Text("Review your take")
+                .font(.largeTitle.weight(.bold))
+                .padding(.top, Spacing.l)
+                
             WaveformView(peaks: rVM.peaks, tint: Color(.systemGray3), style: .bars)
                 .frame(height: 120)
-                .padding(.horizontal, Spacing.m)
-
-            Spacer(minLength: Spacing.xl)
 
             VStack(spacing: Spacing.s) {
-                PrimaryCTA(
-                    title: "Let's Enhance",
-                    systemImage: "wand.and.stars"
-                ) {
+                Button {
                     phase = .enhancing(rVM)
                     Task {
                         await rVM.enhanceWithStudio()
                         phase = .studio(rVM)
                     }
+                } label: {
+                    Label("Enhance Audio", systemImage: "wand.and.stars")
+                        .font(.headline)
+                        .frame(maxWidth: .infinity)
                 }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.large)
 
-                Button("Record Again") {
+                Button("Discard") {
                     phase = .idle
                 }
-                .font(.body.weight(.medium))
+                .font(.body)
                 .foregroundStyle(.secondary)
-                .frame(maxWidth: .infinity, minHeight: 52)
-                .background(.ultraThinMaterial, in: Capsule())
-                .overlay(Capsule().stroke(Color(.separator), lineWidth: 0.5))
             }
-            .padding(.horizontal, Spacing.l)
-            .padding(.bottom, Spacing.xl)
+            Spacer()
         }
+        .padding(.horizontal, Spacing.l)
+        .navigationTitle("Review")
         .task {
             await rVM.onAppear()
         }
     }
 
     private func enhancingLayout(_ rVM: ResultViewModel) -> some View {
-        VStack(spacing: 0) {
+        VStack(spacing: Spacing.l) {
             Spacer()
 
             WaveformView(peaks: rVM.peaks, tint: .accentColor, style: .bars)
@@ -204,136 +170,147 @@ struct RecordView: View {
                         .tint(.accentColor)
                         .padding(.horizontal, Spacing.xxl)
                     Text("\(Int(fraction * 100))%")
-                        .font(.dsCaption.monospacedDigit())
+                        .font(.caption.monospacedDigit())
                         .foregroundStyle(.secondary)
                 } else {
                     ProgressView().controlSize(.large)
                 }
 
                 Text("Enhancing your vocals\u{2026}")
-                    .font(.dsCallout)
+                    .font(.callout)
                     .foregroundStyle(.secondary)
             }
-            .padding(.top, Spacing.m)
 
             Spacer()
         }
+        .navigationTitle("Processing")
     }
 
     private func studioLayout(_ rVM: ResultViewModel) -> some View {
         VStack(spacing: 0) {
-            HStack {
-                Button("New Take") {
-                    phase = .idle
+            
+            // Hero Waveform Card
+            VStack(spacing: Spacing.s) {
+                Picker("Mode", selection: Binding(
+                    get: { rVM.abPlayer.listeningToProcessed },
+                    set: { rVM.abPlayer.listeningToProcessed = $0 }
+                )) {
+                    Text("Original").tag(false)
+                    Text("Studio").tag(true)
                 }
-                .font(.body.weight(.medium))
-                .foregroundStyle(.secondary)
-                .frame(minHeight: 48)
+                .pickerStyle(.segmented)
+                .padding(.horizontal)
+                .padding(.top, Spacing.m)
 
-                Spacer()
-
-                Button("Save") {
-                    path.append(.save(rVM.originalURL))
+                GeometryReader { geometry in
+                    WaveformView(
+                        peaks: rVM.peaks,
+                        progress: rVM.abPlayer.isPlaying ? nil : (rVM.abPlayer.duration > 0 ? rVM.abPlayer.currentTime / rVM.abPlayer.duration : 0),
+                        live: rVM.abPlayer.isPlaying ? { rVM.abPlayer.duration > 0 ? rVM.abPlayer.currentTime / rVM.abPlayer.duration : 0 } : nil,
+                        style: .bars,
+                        playedTint: rVM.abPlayer.listeningToProcessed ? .accentColor : .primary,
+                        focusFraction: scrubFocus
+                    )
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .contentShape(Rectangle())
+                    .gesture(
+                        DragGesture(minimumDistance: 0)
+                            .onChanged { value in
+                                rVM.abPlayer.setScrubbing(true)
+                                let fraction = min(max(value.location.x / geometry.size.width, 0), 1)
+                                rVM.abPlayer.currentTime = fraction * rVM.abPlayer.duration
+                                scrubFocus = fraction
+                            }
+                            .onEnded { _ in
+                                rVM.abPlayer.setScrubbing(false)
+                                scrubFocus = nil
+                            }
+                    )
                 }
-                .font(.body.weight(.semibold))
-                .foregroundStyle(Color.accentColor)
-                .frame(minHeight: 48)
+                .frame(height: 140)
+                .padding(.horizontal, Spacing.m)
+
+                // Dedicated Playback Controls
+                HStack(spacing: Spacing.xl) {
+                    Text(timeString(rVM.abPlayer.currentTime))
+                        .font(.caption.monospacedDigit())
+                        .foregroundStyle(.secondary)
+                    
+                    Button {
+                        rVM.abPlayer.togglePlayPause()
+                    } label: {
+                        Image(systemName: rVM.abPlayer.isPlaying ? "pause.circle.fill" : "play.circle.fill")
+                            .font(.system(size: 52))
+                            .foregroundStyle(Color.accentColor)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(rVM.abPlayer.isPlaying ? "Pause" : "Play")
+                    
+                    Text(timeString(rVM.abPlayer.duration))
+                        .font(.caption.monospacedDigit())
+                        .foregroundStyle(.secondary)
+                }
+                .padding(.bottom, Spacing.l)
+            }
+            .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: Radius.sheet, style: .continuous))
+            .padding(Spacing.m)
+            
+            // Filter Carousel
+            VStack(alignment: .leading, spacing: Spacing.xs) {
+                Text("Tone Filters")
+                    .font(.headline)
+                    .padding(.horizontal, Spacing.m)
+                
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: Spacing.s) {
+                        ForEach(StudioPreset.allCases, id: \.rawValue) { preset in
+                            let isSelected = rVM.selectedPreset == preset
+                            Button {
+                                Task { await rVM.selectPreset(preset) }
+                            } label: {
+                                VStack(spacing: Spacing.xs) {
+                                    Image(systemName: preset.systemImage)
+                                        .font(.title2)
+                                    Text(preset.title)
+                                        .font(.caption.weight(.medium))
+                                }
+                                .frame(width: 80, height: 80)
+                                .foregroundStyle(isSelected ? Color.white : Color.primary)
+                                .background(isSelected ? Color.accentColor : Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                        .stroke(isSelected ? Color.accentColor : Color(.separator), lineWidth: 0.5)
+                                )
+                            }
+                            .buttonStyle(.plain)
+                            .disabled(rVM.isRendering)
+                        }
+                    }
+                    .padding(.horizontal, Spacing.m)
+                }
             }
             .padding(.top, Spacing.s)
-
-            Spacer(minLength: Spacing.l)
-
-            BeforeAfterToggle(isAfter: Binding(
-                get: { rVM.abPlayer.listeningToProcessed },
-                set: { rVM.abPlayer.listeningToProcessed = $0 }
-            ))
-            .padding(.top, Spacing.s)
-
-            TimelineView(.animation(paused: !rVM.abPlayer.isPlaying)) { _ in
-                HStack(spacing: Spacing.xxs) {
-                    let current = Int(rVM.abPlayer.currentTime.rounded(.down))
-                    Text(String(format: "%d.%02d", current / 60, current % 60))
-                        .font(.system(.callout, design: .default).monospacedDigit())
-                    Text("\u{00b7}")
-                    Text(rVM.abPlayer.listeningToProcessed ? "Enhanced" : "Original")
-                        .font(.callout)
-                }
-                .foregroundStyle(.secondary)
+            
+            Spacer()
+        }
+        .navigationTitle("Studio")
+        .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                Button("Discard") { phase = .idle }
             }
-            .padding(.top, Spacing.l)
-
-            GeometryReader { geometry in
-                WaveformView(
-                    peaks: rVM.peaks,
-                    progress: rVM.abPlayer.isPlaying ? nil : (rVM.abPlayer.duration > 0 ? rVM.abPlayer.currentTime / rVM.abPlayer.duration : 0),
-                    live: rVM.abPlayer.isPlaying ? { rVM.abPlayer.duration > 0 ? rVM.abPlayer.currentTime / rVM.abPlayer.duration : 0 } : nil,
-                    style: .bars,
-                    playedTint: rVM.abPlayer.listeningToProcessed ? .accentColor : .primary,
-                    focusFraction: scrubFocus
-                )
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .contentShape(Rectangle())
-                .gesture(
-                    DragGesture(minimumDistance: 0)
-                        .onChanged { value in
-                            rVM.abPlayer.setScrubbing(true)
-                            let fraction = min(max(value.location.x / geometry.size.width, 0), 1)
-                            rVM.abPlayer.currentTime = fraction * rVM.abPlayer.duration
-                            scrubFocus = fraction
-                        }
-                        .onEnded { _ in
-                            rVM.abPlayer.setScrubbing(false)
-                            scrubFocus = nil
-                        }
-                )
-            }
-            .frame(height: 160)
-            .padding(.horizontal, Spacing.m)
-            .padding(.top, Spacing.m)
-
-            Spacer(minLength: Spacing.l)
-
-            ABPlaybackRow(player: rVM.abPlayer)
-                .padding(.vertical, Spacing.s)
-                .padding(.horizontal, Spacing.xl)
-                .background(.ultraThinMaterial, in: Capsule())
-
-            Spacer(minLength: Spacing.l)
-
-            VStack(spacing: Spacing.m) {
-                HStack {
-                    Text("Tone filters")
-                        .font(.headline)
-                        .foregroundStyle(.primary)
-                    Spacer()
+            ToolbarItem(placement: .topBarTrailing) {
+                HStack(spacing: Spacing.m) {
                     Button {
                         showTuner = true
                     } label: {
                         Image(systemName: "slider.horizontal.3")
-                            .font(.body)
-                            .foregroundStyle(.secondary)
-                            .frame(width: 36, height: 36)
-                            .background(.ultraThinMaterial, in: Circle())
-                            .overlay(Circle().stroke(Color(.separator), lineWidth: 0.5))
                     }
-                    .accessibilityLabel("Fine-tune")
-                }
-                .padding(.horizontal, Spacing.l)
-
-                PresetChipRow(
-                    items: StudioPreset.allCases.map {
-                        PresetChipModel(id: $0.rawValue, title: $0.title,
-                                        systemImage: $0.systemImage, colors: toneColors($0))
-                    },
-                    selectedID: rVM.selectedPreset.rawValue,
-                    isEnabled: !rVM.isRendering
-                ) { id in
-                    if let preset = StudioPreset(rawValue: id) {
-                        Task { await rVM.selectPreset(preset) }
-                    }
+                    .disabled(rVM.isRendering)
+                    
+                    Button("Save") { path.append(.save(rVM.originalURL)) }
+                        .fontWeight(.semibold)
                 }
             }
-            .padding(.bottom, Spacing.l)
         }
         .sheet(isPresented: $showTuner) {
             ToneTunerSheet(viewModel: rVM)
@@ -344,76 +321,16 @@ struct RecordView: View {
         }
     }
 
-    // MARK: - Shared subviews
 
-    private func navBar(showLibrary: Bool) -> some View {
-        HStack {
-            Image("Ollin_logo")
-                .resizable()
-                .scaledToFit()
-                .frame(height: 30)
-                .accessibilityLabel("Ollin")
-
-            Spacer()
-
-            if showLibrary {
-                NavigationLink(value: AppRoute.library) {
-                    PlaylistIcon(width: 22)
-                        .frame(width: 48, height: 48)
-                        .background(.ultraThinMaterial, in: Circle())
-                        .overlay(Circle().stroke(Color(.separator), lineWidth: 0.5))
-                }
-                .accessibilityLabel("Library")
-            }
-        }
-        .padding(.top, Spacing.s)
-    }
-
-    private var headline: some View {
-        VStack(spacing: Spacing.xs) {
-            (Text("Record your ").foregroundStyle(.primary)
-                + Text("voice").foregroundStyle(Color.accentColor))
-                .font(.system(.title2, design: .default).weight(.semibold))
-
-            Text("High quality recording, crystal clear results!")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-        }
-        .multilineTextAlignment(.center)
-        .accessibilityElement(children: .combine)
-        .accessibilityAddTraits(.isHeader)
-    }
-
-    private var recordingHeadline: some View {
-        VStack(spacing: Spacing.xs) {
-            Text("Listening\u{2026}")
-                .font(.system(.title2, design: .default).weight(.semibold))
-                .foregroundStyle(Color.accentColor)
-
-            Text("Try to sing clearly in a quiet environment")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-        }
-        .multilineTextAlignment(.center)
-        .accessibilityElement(children: .combine)
-        .accessibilityAddTraits(.isHeader)
-    }
 
     private var recordingSurface: some View {
-        VStack(spacing: Spacing.m) {
+        VStack(spacing: Spacing.xl) {
             Text(elapsedText)
-                .font(.system(.largeTitle, design: .rounded).monospacedDigit().weight(.medium))
+                .font(.system(size: 64, weight: .semibold, design: .rounded).monospacedDigit())
                 .foregroundStyle(isRecording ? Color.primary : Color(.tertiaryLabel))
                 .contentTransition(.numericText())
                 .accessibilityLabel(isRecording ? "Recording time" : "Ready")
                 .accessibilityValue(elapsedText)
-
-            if isRecording {
-                LevelMeter(rms: viewModel.rms, peak: viewModel.peak)
-                    .frame(height: 6)
-                    .padding(.horizontal, Spacing.xl)
-                    .transition(.opacity.combined(with: .scale))
-            }
 
             LiveWaveform(
                 level: CGFloat(viewModel.rms),
@@ -424,20 +341,14 @@ struct RecordView: View {
         }
         .padding(Spacing.l)
         .frame(maxWidth: .infinity)
-        .background(
-            Radius.rect(Radius.sheet)
-                .fill(isRecording
-                      ? Color.accentColor.opacity(0.06)
-                      : Color(.secondarySystemBackground))
-        )
-        .animation(reduceMotion ? nil : Motion.standard, value: isRecording)
+        .animation(reduceMotion ? nil : .snappy, value: isRecording)
     }
 
     private var notice: some View {
         Group {
             if let notice = viewModel.notice {
                 Text(notice)
-                    .font(.dsCallout)
+                    .font(.callout)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
                     .padding(.top, Spacing.m)
@@ -447,32 +358,15 @@ struct RecordView: View {
         }
     }
 
-    private var importButton: some View {
-        Button {
-            showImporter = true
-        } label: {
-            HStack(spacing: Spacing.xs) {
-                Image(systemName: "square.and.arrow.down")
-                    .font(.body.weight(.medium))
-                Text("Import audio")
-                    .font(.body.weight(.medium))
-            }
-            .foregroundStyle(Color.accentColor)
-            .padding(.horizontal, Spacing.xl)
-            .frame(minHeight: 52)
-            .background(.ultraThinMaterial, in: Capsule())
-            .overlay(Capsule().stroke(Color(.separator), lineWidth: 0.5))
-            .shadow(color: .black.opacity(0.04), radius: 8, y: 3)
-        }
-        .buttonStyle(.plain)
-        .accessibilityHint("Import an audio file to enhance")
-    }
-
     // MARK: - Helpers
 
-    private var elapsedText: String {
-        let total = Int(viewModel.elapsed.rounded(.down))
+    private func timeString(_ time: Double) -> String {
+        let total = Int(time.rounded(.down))
         return String(format: "%d:%02d", total / 60, total % 60)
+    }
+
+    private var elapsedText: String {
+        timeString(viewModel.elapsed)
     }
 
     private func toneColors(_ preset: StudioPreset) -> [Color] {
@@ -501,22 +395,8 @@ struct RecordView: View {
     #endif
 
     private var ambientGlow: some View {
-        ZStack {
-            Color(.systemBackground)
-
-            Circle()
-                .fill(Color.accentColor.opacity(0.04))
-                .frame(width: 320, height: 320)
-                .blur(radius: 80)
-                .offset(x: -120, y: -200)
-
-            Circle()
-                .fill(Color.accentColor.opacity(0.02))
-                .frame(width: 280, height: 280)
-                .blur(radius: 60)
-                .offset(x: 140, y: 250)
-        }
-        .ignoresSafeArea()
+        Color(.systemBackground)
+            .ignoresSafeArea()
     }
 }
 

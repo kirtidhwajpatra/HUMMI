@@ -39,11 +39,11 @@ struct OnboardingPermissionScreen: View {
 
             VStack(spacing: Spacing.s) {
                 Text("onboarding.screen3.headline")
-                    .font(.dsHeroTitleCompact)
+                    .font(.largeTitle.weight(.bold))
                     .multilineTextAlignment(.center)
                     .accessibilityAddTraits(.isHeader)
                 Text("onboarding.screen3.body")
-                    .font(.dsBody)
+                    .font(.body)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
             }
@@ -65,21 +65,29 @@ struct OnboardingPermissionScreen: View {
                     openSettings()
                 } label: {
                     Text("onboarding.screen3.openSettings")
-                        .font(.dsCallout.weight(.semibold))
+                        .font(.callout.weight(.semibold))
                         .frame(maxWidth: .infinity, minHeight: 44)
                 }
                 .buttonStyle(.bordered)
 
                 Button(action: onComplete) {
                     Text("onboarding.screen3.continueAnyway")
-                        .font(.dsCallout)
+                        .font(.callout)
                         .frame(maxWidth: .infinity, minHeight: 44)
                 }
             } else {
-                PrimaryCTA(title: NSLocalizedString("onboarding.screen3.enable", comment: ""),
-                           systemImage: "mic.fill", isLoading: isRequesting) {
+                Button {
                     Task { await requestPermission() }
+                } label: {
+                    if isRequesting {
+                        ProgressView()
+                    } else {
+                        Label(NSLocalizedString("onboarding.screen3.enable", comment: ""), systemImage: "mic.fill")
+                            .frame(maxWidth: .infinity)
+                    }
                 }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.large)
                 .accessibilityHint(Text("onboarding.screen3.enable.hint"))
             }
         }
@@ -101,7 +109,7 @@ struct OnboardingPermissionScreen: View {
                         .symbolRenderingMode(.hierarchical)
                         .foregroundStyle(.tint)
                     Text(badge.textKey)
-                        .font(.dsCaption)
+                        .font(.caption)
                         .foregroundStyle(.secondary)
                 }
                 .frame(maxWidth: .infinity)

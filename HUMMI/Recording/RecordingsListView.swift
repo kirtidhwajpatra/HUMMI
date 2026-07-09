@@ -21,10 +21,7 @@ struct RecordingsListView: View {
                 } label: {
                     RecordingRow(item: item)
                 }
-                .buttonStyle(RowCardButtonStyle())
-                .listRowBackground(Color.clear)
-                .listRowSeparator(.hidden)
-                .listRowInsets(EdgeInsets(top: Spacing.xs, leading: Spacing.m, bottom: Spacing.xs, trailing: Spacing.m))
+                .buttonStyle(.plain)
                 .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                     Button {
                         pendingDeletion = item
@@ -35,8 +32,7 @@ struct RecordingsListView: View {
                 }
             }
         }
-        .listStyle(.plain)
-        .background(Color(.systemGroupedBackground))
+        .listStyle(.insetGrouped)
         .overlay {
             if viewModel.items.isEmpty, !viewModel.isLoading {
                 EmptyStateView(
@@ -92,18 +88,5 @@ struct RecordingsListView: View {
             set: { if !$0 { viewModel.errorMessage = nil } })
     }
 
-    private struct RowCardButtonStyle: ButtonStyle {
-        func makeBody(configuration: Configuration) -> some View {
-            configuration.label
-                .padding(Spacing.m)
-                .background(
-                    Radius.rect(Radius.card)
-                        .fill(.thinMaterial)
-                        .overlay(Radius.rect(Radius.card).stroke(Color.white.opacity(0.08), lineWidth: 0.5))
-                        .shadow(color: .black.opacity(0.03), radius: 8, y: 4)
-                )
-                .scaleEffect(configuration.isPressed ? 0.97 : 1.0)
-                .animation(.spring(response: 0.25, dampingFraction: 0.75), value: configuration.isPressed)
-        }
-    }
+
 }

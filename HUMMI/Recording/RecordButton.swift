@@ -14,45 +14,33 @@ struct RecordButton: View {
     var rms: Float = 0
     let action: () -> Void
 
+    private let ringSize: CGFloat = 72
+    private var innerSize: CGFloat { isRecording ? 32 : 60 }
+    private var innerRadius: CGFloat { isRecording ? 6 : 30 }
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @State private var breathe = false
-
-    private let ringSize: CGFloat = 98
-    private var innerSize: CGFloat { isRecording ? 42 : 82 }
-    private var innerRadius: CGFloat { isRecording ? 10 : 41 }
 
     var body: some View {
         Button(action: action) {
             ZStack {
+                // Outer ring
                 Circle()
-                    .stroke(
-                        isRecording ? Color.accentColor.opacity(0.5) : Color(.systemGray4),
-                        lineWidth: 4)
+                    .stroke(Color(.systemGray4), lineWidth: 4)
                     .frame(width: ringSize, height: ringSize)
-                    .scaleEffect(isRecording ? 1.0 + CGFloat(rms) * 0.4 : 1.0)
-                    .animation(reduceMotion ? nil : .interactiveSpring(response: 0.15, dampingFraction: 0.6), value: rms)
-                    .animation(reduceMotion ? nil : Motion.standard, value: isRecording)
 
+                // Inner morphing button
                 RoundedRectangle(cornerRadius: innerRadius, style: .continuous)
-                    .fill(Color.accentColor)
+                    .fill(Color.red)
                     .frame(width: innerSize, height: innerSize)
-                    .shadow(color: Color.accentColor.opacity(0.3), radius: 8, y: 3)
-                    .animation(reduceMotion ? nil : Motion.standard, value: isRecording)
             }
             .frame(width: ringSize, height: ringSize)
-            .scaleEffect((!isRecording && breathe && !reduceMotion) ? 1.03 : 1.0)
             .contentShape(Circle())
+            // Use native snappy animation for state change
+            .animation(reduceMotion ? nil : .snappy(duration: 0.25, extraBounce: 0.1), value: isRecording)
         }
         .buttonStyle(ShutterPressStyle(reduceMotion: reduceMotion))
         .accessibilityLabel(isRecording ? "Stop recording" : "Record")
         .accessibilityHint(isRecording ? "Stops and opens your take" : "Starts recording immediately")
         .accessibilityAddTraits(.startsMediaSession)
-        .onAppear {
-            guard !reduceMotion else { return }
-            withAnimation(.easeInOut(duration: 1.5).repeatForever(autoreverses: true)) {
-                breathe = true
-            }
-        }
     }
 
     /// Gently expands on touch, echoing the inviting feel of a shutter.

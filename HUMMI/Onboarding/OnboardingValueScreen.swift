@@ -26,20 +26,25 @@ struct OnboardingValueScreen: View {
 
             VStack(spacing: Spacing.s) {
                 Text("onboarding.screen1.headline")
-                    .font(.dsHeroTitle)
+                    .font(.largeTitle.weight(.bold))
                     .multilineTextAlignment(.center)
                     .accessibilityHeadingIfPossible()
                 Text("onboarding.screen1.subhead")
-                    .font(.dsBody)
+                    .font(.body)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
             }
             .staggered(1, appeared: appeared)
             .accessibilityElement(children: .combine)
         } actions: {
-            PrimaryCTA(title: continueTitle, systemImage: "arrow.right") {
+            Button {
                 onContinue()
+            } label: {
+                Label(continueTitle, systemImage: "arrow.right")
+                    .frame(maxWidth: .infinity)
             }
+            .buttonStyle(.borderedProminent)
+            .controlSize(.large)
             .accessibilityHint(Text("onboarding.continue.hint"))
         }
         .overlay(alignment: .topTrailing) { skipButton }
@@ -73,9 +78,7 @@ struct OnboardingValueScreen: View {
             }
         }
         .padding(Spacing.m)
-        .background(.thickMaterial, in: Radius.rect(Radius.sheet))
-        .overlay(Radius.rect(Radius.sheet).stroke(Color.white.opacity(0.12), lineWidth: 0.5))
-        .shadow(color: .black.opacity(0.06), radius: 16, y: 8)
+        .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: Radius.sheet, style: .continuous))
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(Text("onboarding.demo.label"))
         .accessibilityValue(Text(demo.isPlayingAfter
@@ -84,7 +87,7 @@ struct OnboardingValueScreen: View {
 
     private func indicatorChip(_ key: LocalizedStringKey, active: Bool) -> some View {
         Text(key)
-            .font(.dsToggleLabel)
+            .font(.subheadline.weight(.medium))
             .frame(maxWidth: .infinity, minHeight: 36)
             .background(active ? AnyShapeStyle(Color.accentColor) : AnyShapeStyle(Color(.tertiarySystemFill)),
                         in: Capsule())
@@ -95,7 +98,7 @@ struct OnboardingValueScreen: View {
     private var skipButton: some View {
         Button(action: onSkip) {
             Text("onboarding.skip")
-                .font(.dsCallout)
+                .font(.callout)
                 .frame(minWidth: 44, minHeight: 44)
         }
         .padding(.trailing, Spacing.s)
