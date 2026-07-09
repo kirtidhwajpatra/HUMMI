@@ -98,8 +98,9 @@ struct RecordingsListView: View {
                 .padding(Spacing.m)
                 .background(
                     Radius.rect(Radius.card)
-                        .fill(Color(.secondarySystemGroupedBackground))
-                        .shadow(color: .black.opacity(0.04), radius: 6, y: 3)
+                        .fill(.thinMaterial)
+                        .overlay(Radius.rect(Radius.card).stroke(Color.white.opacity(0.08), lineWidth: 0.5))
+                        .shadow(color: .black.opacity(0.03), radius: 8, y: 4)
                 )
                 .scaleEffect(configuration.isPressed ? 0.97 : 1.0)
                 .animation(.spring(response: 0.25, dampingFraction: 0.75), value: configuration.isPressed)

@@ -18,6 +18,7 @@ struct RecordView: View {
 
     @State private var showImporter = false
     @State private var showTuner = false
+    @State private var scrubFocus: Double? = nil
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private var isRecording: Bool { viewModel.isRecording }
@@ -111,7 +112,7 @@ struct RecordView: View {
 
             Spacer(minLength: Spacing.l)
 
-            RecordButton(isRecording: true) {
+            RecordButton(isRecording: true, rms: viewModel.rms) {
                 viewModel.stop()
             }
 
@@ -267,7 +268,8 @@ struct RecordView: View {
                     progress: rVM.abPlayer.isPlaying ? nil : (rVM.abPlayer.duration > 0 ? rVM.abPlayer.currentTime / rVM.abPlayer.duration : 0),
                     live: rVM.abPlayer.isPlaying ? { rVM.abPlayer.duration > 0 ? rVM.abPlayer.currentTime / rVM.abPlayer.duration : 0 } : nil,
                     style: .bars,
-                    playedTint: rVM.abPlayer.listeningToProcessed ? .accentColor : .primary
+                    playedTint: rVM.abPlayer.listeningToProcessed ? .accentColor : .primary,
+                    focusFraction: scrubFocus
                 )
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .contentShape(Rectangle())
@@ -277,8 +279,12 @@ struct RecordView: View {
                             rVM.abPlayer.setScrubbing(true)
                             let fraction = min(max(value.location.x / geometry.size.width, 0), 1)
                             rVM.abPlayer.currentTime = fraction * rVM.abPlayer.duration
+                            scrubFocus = fraction
                         }
-                        .onEnded { _ in rVM.abPlayer.setScrubbing(false) }
+                        .onEnded { _ in
+                            rVM.abPlayer.setScrubbing(false)
+                            scrubFocus = nil
+                        }
                 )
             }
             .frame(height: 160)
@@ -401,6 +407,13 @@ struct RecordView: View {
                 .contentTransition(.numericText())
                 .accessibilityLabel(isRecording ? "Recording time" : "Ready")
                 .accessibilityValue(elapsedText)
+
+            if isRecording {
+                LevelMeter(rms: viewModel.rms, peak: viewModel.peak)
+                    .frame(height: 6)
+                    .padding(.horizontal, Spacing.xl)
+                    .transition(.opacity.combined(with: .scale))
+            }
 
             LiveWaveform(
                 level: CGFloat(viewModel.rms),

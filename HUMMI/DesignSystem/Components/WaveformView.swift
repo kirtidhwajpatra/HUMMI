@@ -34,6 +34,8 @@ struct WaveformView: View {
     var normalize: Bool = true
     /// Colour of the played (left-of-playhead) bars in `.bars`.
     var playedTint: Color = .accentColor
+    /// Magnification center position (0…1) during scrubbing.
+    var focusFraction: Double? = nil
 
     var body: some View {
         Group {
@@ -53,7 +55,7 @@ struct WaveformView: View {
     private func canvas(at playhead: Double?) -> some View {
         Canvas { context, size in
             switch style {
-            case .bars: drawBars(context, size, playhead)
+            case .bars: drawBars(context, size, playhead, focusFraction)
             case .line: drawLine(context, size, playhead)
             }
         }
@@ -61,7 +63,7 @@ struct WaveformView: View {
 
     // MARK: - Bars
 
-    private func drawBars(_ context: GraphicsContext, _ size: CGSize, _ playhead: Double?) {
+    private func drawBars(_ context: GraphicsContext, _ size: CGSize, _ playhead: Double?, _ focus: Double?) {
         let barWidth: CGFloat = 3
         let spacing: CGFloat = 2
         let slot = barWidth + spacing
@@ -74,8 +76,27 @@ struct WaveformView: View {
 
         for (index, peak) in bars.enumerated() {
             let x = CGFloat(index) * slot
-            let height = max(size.height * CGFloat(min(peak * scale, 1)), 2)
-            let rect = CGRect(x: x, y: (size.height - height) / 2, width: barWidth, height: height)
+            
+            // Calculate dynamic magnification based on distance to the user's scrub touch focus
+            let barProgress = x / size.width
+            let magnification: CGFloat
+            if let focus {
+                let distance = abs(barProgress - focus)
+                if distance < 0.15 {
+                    magnification = 1.0 + (0.15 - distance) * 4.0 // Up to 1.6x height amplification
+                } else {
+                    magnification = 1.0
+                }
+            } else {
+                magnification = 1.0
+            }
+
+            let height = max(size.height * CGFloat(min(peak * scale, 1)) * magnification, 2)
+            
+            // Dynamically scale width slightly for the magnified bars under focus
+            let dynamicWidth = barWidth * min(magnification, 1.3)
+            let rect = CGRect(x: x, y: (size.height - height) / 2, width: dynamicWidth, height: height)
+            
             let color: Color
             if let playhead {
                 color = (x + barWidth / 2) <= CGFloat(playhead) * size.width ? played : upcoming
@@ -84,7 +105,7 @@ struct WaveformView: View {
             }
             let topColor = color
             let bottomColor = color.opacity(0.4)
-            let path = Path(roundedRect: rect, cornerRadius: barWidth / 2)
+            let path = Path(roundedRect: rect, cornerRadius: dynamicWidth / 2)
             context.fill(
                 path,
                 with: .linearGradient(

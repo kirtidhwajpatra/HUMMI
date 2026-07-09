@@ -73,7 +73,9 @@ struct OnboardingValueScreen: View {
             }
         }
         .padding(Spacing.m)
-        .background(.thinMaterial, in: Radius.rect(Radius.sheet))
+        .background(.thickMaterial, in: Radius.rect(Radius.sheet))
+        .overlay(Radius.rect(Radius.sheet).stroke(Color.white.opacity(0.12), lineWidth: 0.5))
+        .shadow(color: .black.opacity(0.06), radius: 16, y: 8)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(Text("onboarding.demo.label"))
         .accessibilityValue(Text(demo.isPlayingAfter

@@ -11,6 +11,7 @@ import SwiftUI
 
 struct RecordButton: View {
     let isRecording: Bool
+    var rms: Float = 0
     let action: () -> Void
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -28,6 +29,8 @@ struct RecordButton: View {
                         isRecording ? Color.accentColor.opacity(0.5) : Color(.systemGray4),
                         lineWidth: 4)
                     .frame(width: ringSize, height: ringSize)
+                    .scaleEffect(isRecording ? 1.0 + CGFloat(rms) * 0.4 : 1.0)
+                    .animation(reduceMotion ? nil : .interactiveSpring(response: 0.15, dampingFraction: 0.6), value: rms)
                     .animation(reduceMotion ? nil : Motion.standard, value: isRecording)
 
                 RoundedRectangle(cornerRadius: innerRadius, style: .continuous)
