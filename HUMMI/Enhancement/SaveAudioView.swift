@@ -10,9 +10,14 @@
 import SwiftUI
 
 struct SaveAudioView: View {
-    @Bindable var viewModel: ResultViewModel
+    @State private var viewModel: ResultViewModel
     /// Opens the "All recordings" library.
     var onOpenPlaylist: () -> Void = {}
+
+    init(url: URL, onOpenPlaylist: @escaping () -> Void = {}) {
+        self._viewModel = State(initialValue: ResultViewModel(originalURL: url))
+        self.onOpenPlaylist = onOpenPlaylist
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -77,6 +82,9 @@ struct SaveAudioView: View {
                 .presentationBackground(.thinMaterial)
         }
         .onDisappear { viewModel.commitName() }
+        .task {
+            await viewModel.onAppear()
+        }
     }
 
     // MARK: - Editable name

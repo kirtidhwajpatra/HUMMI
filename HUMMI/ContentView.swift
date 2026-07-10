@@ -56,7 +56,7 @@ struct ContentView: View {
                             path.removeAll() // Pop to root
                         }
                     case .save(let url):
-                        SaveAudioView(viewModel: ResultViewModel(originalURL: url))
+                        SaveAudioView(url: url)
                     }
                 }
         }
