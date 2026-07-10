@@ -305,9 +305,24 @@ struct RecordView: View {
             
             // Filter Carousel
             VStack(alignment: .leading, spacing: Spacing.m) {
-                Text("Tone Filters")
-                    .font(.title3.weight(.bold))
-                    .padding(.horizontal, Spacing.l)
+                HStack {
+                    Text("Tone Filters")
+                        .font(.title3.weight(.bold))
+                    
+                    Spacer()
+                    
+                    Button {
+                        showTuner = true
+                    } label: {
+                        Image(systemName: "slider.horizontal.3")
+                            .font(.title3)
+                            .foregroundStyle(.primary)
+                            .padding(8)
+                            .background(Color(.secondarySystemGroupedBackground), in: Circle())
+                    }
+                    .disabled(rVM.isRendering)
+                }
+                .padding(.horizontal, Spacing.l)
                 
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: Spacing.s) {
@@ -339,17 +354,12 @@ struct RecordView: View {
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
                 Button("Discard") { phase = .idle }
+                    .foregroundStyle(.primary)
             }
-            ToolbarItemGroup(placement: .topBarTrailing) {
-                Button {
-                    showTuner = true
-                } label: {
-                    Image(systemName: "slider.horizontal.3")
-                }
-                .disabled(rVM.isRendering)
-                
+            ToolbarItem(placement: .topBarTrailing) {
                 Button("Save") { path.append(.save(rVM.originalURL)) }
                     .fontWeight(.semibold)
+                    .foregroundStyle(.primary)
             }
         }
         .sheet(isPresented: $showTuner) {
