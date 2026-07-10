@@ -13,7 +13,6 @@ struct HUMMIApp: App {
         WindowGroup {
             AppRootView()
                 .tint(.accentColor)
-                .preferredColorScheme(.light)
         }
     }
 }

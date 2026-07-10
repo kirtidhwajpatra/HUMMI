@@ -56,7 +56,7 @@ struct SaveAudioView: View {
                     } label: {
                         Image(systemName: viewModel.abPlayer.isPlaying ? "pause.fill" : "play.fill")
                             .font(.system(size: 32))
-                            .foregroundStyle(Color.dsForestGreen)
+                            .foregroundStyle(.primary)
                     }
                     .buttonStyle(.plain)
                     
@@ -75,7 +75,7 @@ struct SaveAudioView: View {
         }
         .frame(maxWidth: Spacing.contentMaxWidth)
         .frame(maxWidth: .infinity)
-        .background(Color.dsMintGreen)
+        .background(Color(.systemBackground))
         .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -99,7 +99,7 @@ struct SaveAudioView: View {
     private var nameField: some View {
         TextField("Recording", text: $viewModel.displayName)
             .font(.largeTitle.weight(.heavy))
-            .foregroundStyle(Color.dsForestGreen)
+            .foregroundStyle(.primary)
             .multilineTextAlignment(.center)
             .textInputAutocapitalization(.words)
             .submitLabel(.done)
