@@ -15,11 +15,12 @@ final class RecordingsListViewModel: NSObject, AVAudioPlayerDelegate {
     private(set) var items: [RecordingItem] = []
     private(set) var isLoading = false
     private(set) var isImporting = false
-    /// User-readable; the view presents and clears it.
     var errorMessage: String?
     
     private var audioPlayer: AVAudioPlayer?
     private(set) var currentlyPlayingID: RecordingItem.ID?
+    private(set) var playbackProgress: Double?
+    private var progressTicker: Task<Void, Never>?
 
     override init() {
         super.init()
@@ -29,13 +30,16 @@ final class RecordingsListViewModel: NSObject, AVAudioPlayerDelegate {
         if currentlyPlayingID == item.id {
             if let player = audioPlayer, player.isPlaying {
                 player.pause()
+                stopProgressTicker()
                 currentlyPlayingID = nil
             } else {
                 audioPlayer?.play()
+                startProgressTicker()
                 currentlyPlayingID = item.id
             }
         } else {
             audioPlayer?.stop()
+            stopProgressTicker()
             do {
                 let urlToPlay: URL
                 if item.isEnhanced, let enhancedURL = try? EnhancementStore.url(for: item.url, preset: .studio), FileManager.default.fileExists(atPath: enhancedURL.path) {
@@ -52,16 +56,36 @@ final class RecordingsListViewModel: NSObject, AVAudioPlayerDelegate {
                 audioPlayer?.delegate = self
                 audioPlayer?.play()
                 currentlyPlayingID = item.id
+                startProgressTicker()
             } catch {
                 errorMessage = "Playback failed: \(error.localizedDescription)"
             }
         }
     }
 
+    private func startProgressTicker() {
+        stopProgressTicker()
+        progressTicker = Task { @MainActor in
+            while !Task.isCancelled {
+                if let player = audioPlayer, player.duration > 0 {
+                    playbackProgress = player.currentTime / player.duration
+                }
+                try? await Task.sleep(for: .milliseconds(50))
+            }
+        }
+    }
+
+    private func stopProgressTicker() {
+        progressTicker?.cancel()
+        progressTicker = nil
+        playbackProgress = nil
+    }
+
     nonisolated func audioPlayerDidFinishPlaying(_ player: AVAudioPlayer, successfully flag: Bool) {
         Task { @MainActor in
             if self.audioPlayer == player {
                 self.currentlyPlayingID = nil
+                self.stopProgressTicker()
             }
         }
     }

@@ -19,6 +19,7 @@ struct RecordingsListView: View {
                 RecordingRow(
                     item: item,
                     isPlaying: viewModel.currentlyPlayingID == item.id,
+                    playbackProgress: viewModel.currentlyPlayingID == item.id ? viewModel.playbackProgress : nil,
                     onPlayTapped: { viewModel.togglePlayback(for: item) },
                     onRowTapped: { onSelect(item.url) }
                 )

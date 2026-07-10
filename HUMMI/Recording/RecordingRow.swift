@@ -11,6 +11,7 @@ import SwiftUI
 struct RecordingRow: View {
     let item: RecordingItem
     var isPlaying: Bool = false
+    var playbackProgress: Double? = nil
     var onPlayTapped: () -> Void = {}
     var onRowTapped: () -> Void = {}
 
@@ -39,12 +40,13 @@ struct RecordingRow: View {
 
             Spacer(minLength: Spacing.s)
 
-            WaveformView(
-                peaks: item.peaks,
-                tint: item.isEnhanced ? Color.accentColor.opacity(0.8) : Color(.systemGray3),
-                style: .bars,
-                normalize: true)
-                .frame(width: 64, height: 24)
+                    WaveformView(
+                        peaks: item.peaks,
+                        tint: item.isEnhanced ? Color.accentColor.opacity(0.8) : Color(.systemGray3),
+                        progress: playbackProgress,
+                        style: isPlaying ? .line : .bars,
+                        normalize: true)
+                        .frame(width: 64, height: 24)
 
                     Text(durationText)
                         .font(.subheadline.monospacedDigit())
