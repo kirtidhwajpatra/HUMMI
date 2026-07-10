@@ -104,13 +104,13 @@ struct RecordView: View {
                     }
                 } label: {
                     Image(systemName: "text.quote")
-                        .foregroundStyle(showLyrics ? Color.red : Color.primary)
+                        .foregroundStyle(showLyrics ? Color.red : Color.dsForestGreen)
                 }
             }
             ToolbarItem(placement: .topBarTrailing) {
                 Button { showImporter = true } label: {
                     Image(systemName: "square.and.arrow.down")
-                        .foregroundStyle(Color.primary)
+                        .foregroundStyle(Color.dsForestGreen)
                 }
             }
         }
@@ -164,7 +164,7 @@ struct RecordView: View {
                                 .font(.system(size: 24, weight: .bold))
                                 .foregroundStyle(.white)
                                 .frame(width: 56, height: 56)
-                                .background(Color.primary, in: Circle())
+                                .background(Color.dsForestGreen, in: Circle())
                         }
                         
                         // Enhance Button
@@ -214,13 +214,13 @@ struct RecordView: View {
                     }
                 } label: {
                     Image(systemName: "text.quote")
-                        .foregroundStyle(showLyrics ? Color.red : Color.primary)
+                        .foregroundStyle(showLyrics ? Color.red : Color.dsForestGreen)
                 }
             }
             ToolbarItem(placement: .topBarTrailing) {
                 Button { showImporter = true } label: {
                     Image(systemName: "square.and.arrow.down")
-                        .foregroundStyle(Color.primary)
+                        .foregroundStyle(Color.dsForestGreen)
                 }
             }
         }
@@ -252,7 +252,7 @@ struct RecordView: View {
                         progress: rVM.abPlayer.isPlaying ? nil : (rVM.abPlayer.duration > 0 ? rVM.abPlayer.currentTime / rVM.abPlayer.duration : 0),
                         live: rVM.abPlayer.isPlaying ? { rVM.abPlayer.duration > 0 ? rVM.abPlayer.currentTime / rVM.abPlayer.duration : 0 } : nil,
                         style: .bars,
-                        playedTint: rVM.abPlayer.listeningToProcessed ? .accentColor : .primary,
+                        playedTint: rVM.abPlayer.listeningToProcessed ? .accentColor : Color.dsForestGreen,
                         focusFraction: scrubFocus
                     )
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -284,7 +284,7 @@ struct RecordView: View {
                     } label: {
                         Image(systemName: rVM.abPlayer.isPlaying ? "pause.fill" : "play.fill")
                             .font(.system(size: 32))
-                            .foregroundStyle(.primary)
+                            .foregroundStyle(Color.dsForestGreen)
                     }
                     .buttonStyle(.plain)
                     .accessibilityLabel(rVM.abPlayer.isPlaying ? "Pause" : "Play")
@@ -312,7 +312,7 @@ struct RecordView: View {
                     } label: {
                         Image(systemName: "slider.horizontal.3")
                             .font(.title3)
-                            .foregroundStyle(.primary)
+                            .foregroundStyle(Color.dsForestGreen)
                             .padding(8)
                             .background(Color(.secondarySystemGroupedBackground), in: Circle())
                     }
@@ -334,7 +334,7 @@ struct RecordView: View {
                                         .font(.caption.weight(.medium))
                                 }
                                 .frame(width: 88, height: 88)
-                                .foregroundStyle(isSelected ? Color.white : Color.primary)
+                                .foregroundStyle(isSelected ? Color.white : Color.dsForestGreen)
                                 .background(ToneFilterCardBackground(preset: preset, isSelected: isSelected))
                             }
                             .buttonStyle(.plain)
@@ -350,12 +350,12 @@ struct RecordView: View {
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
                 Button("Discard") { phase = .idle }
-                    .foregroundStyle(.primary)
+                    .foregroundStyle(Color.dsForestGreen)
             }
             ToolbarItem(placement: .topBarTrailing) {
                 Button("Save") { path.append(.save(rVM.originalURL)) }
                     .fontWeight(.semibold)
-                    .foregroundStyle(.primary)
+                    .foregroundStyle(Color.dsForestGreen)
             }
         }
         .sheet(isPresented: $showTuner) {
@@ -376,7 +376,7 @@ struct RecordView: View {
         return VStack(spacing: showLyrics ? 8 : Spacing.xl) {
             Text(timeText)
                 .font(.system(size: showLyrics ? 24 : 64, weight: .semibold, design: .rounded).monospacedDigit())
-                .foregroundStyle((isPlayback || isRecording) ? Color.primary : Color(.tertiaryLabel))
+                .foregroundStyle((isPlayback || isRecording) ? Color.dsForestGreen : Color(.tertiaryLabel))
                 .contentTransition(.numericText())
                 .accessibilityLabel(isRecording ? "Recording time" : "Ready")
                 .accessibilityValue(timeText)
@@ -388,7 +388,7 @@ struct RecordView: View {
                         progress: rVM.abPlayer.isPlaying ? nil : (rVM.abPlayer.duration > 0 ? rVM.abPlayer.currentTime / rVM.abPlayer.duration : 0),
                         live: rVM.abPlayer.isPlaying ? { rVM.abPlayer.duration > 0 ? rVM.abPlayer.currentTime / rVM.abPlayer.duration : 0 } : nil,
                         style: .bars,
-                        playedTint: .primary
+                        playedTint: Color.dsForestGreen
                     )
                 }
                 .frame(height: showLyrics ? 32 : 84)
@@ -511,7 +511,7 @@ struct RecordView: View {
     #endif
 
     private var ambientGlow: some View {
-        Color(.systemBackground)
+        Color.dsMintGreen
             .ignoresSafeArea()
     }
 }
@@ -568,7 +568,7 @@ struct ToneFilterCardBackground: View {
         func c(_ r: Double, _ g: Double, _ b: Double) -> Color { Color(red: r, green: g, blue: b) }
         switch preset {
         case .balanced: return (c(0.22, 0.62, 0.55), c(0.12, 0.82, 0.42), c(0.0, 0.3, 0.6), c(0.1, 0.2, 0.1))
-        case .studio:   return (c(0.93, 0.32, 0.26), c(1.0, 0.6, 0.2), c(0.8, 0.1, 0.5), c(0.2, 0.0, 0.0))
+        case .studio:   return (c(1.0, 0.235, 0.255), c(0.784, 1.0, 0.784), c(0.0, 0.255, 0.196), c(1.0, 0.5, 0.5))
         case .warm:     return (c(0.96, 0.52, 0.22), c(1.0, 0.8, 0.2), c(0.9, 0.2, 0.1), c(1.0, 1.0, 1.0))
         case .bright:   return (c(0.90, 0.66, 0.18), c(1.0, 0.9, 0.4), c(1.0, 0.5, 0.1), c(1.0, 1.0, 0.8))
         case .vintage:  return (c(0.62, 0.46, 0.30), c(0.8, 0.6, 0.4), c(0.3, 0.2, 0.1), c(0.9, 0.8, 0.6))
