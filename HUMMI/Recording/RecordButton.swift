@@ -29,7 +29,7 @@ struct RecordButton: View {
 
                 // Inner morphing button
                 RoundedRectangle(cornerRadius: innerRadius, style: .continuous)
-                    .fill(Color.red)
+                    .fill(ThemeGradients.livenGreen)
                     .frame(width: innerSize, height: innerSize)
             }
             .frame(width: ringSize, height: ringSize)

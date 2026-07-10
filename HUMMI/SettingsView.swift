@@ -65,6 +65,7 @@ struct SettingsView: View {
                 Text("This permanently deletes all your recordings and cannot be undone.")
             }
         }
+        .scrollContentBackground(.hidden)
         .navigationTitle("Settings")
         .confirmationDialog("Delete All Recordings?", isPresented: $isShowingDeleteConfirmation, titleVisibility: .visible) {
             Button("Delete All", role: .destructive) {
