@@ -3,7 +3,6 @@ import UIKit
 import Combine
 
 class RichTextContext: ObservableObject {
-    let objectWillChange = ObservableObjectPublisher()
     @Published var isEmpty: Bool = true
     weak var textView: UITextView? {
         didSet {
@@ -69,13 +68,27 @@ class RichTextContext: ObservableObject {
     }
 }
 
+class PlainPasteTextView: UITextView {
+    override func paste(_ sender: Any?) {
+        guard let string = UIPasteboard.general.string else {
+            super.paste(sender)
+            return
+        }
+        let attributes = typingAttributes
+        let attrStr = NSAttributedString(string: string, attributes: attributes)
+        textStorage.replaceCharacters(in: selectedRange, with: attrStr)
+        selectedRange = NSRange(location: selectedRange.location + string.count, length: 0)
+        delegate?.textViewDidChange?(self)
+    }
+}
+
 struct RichTextEditor: UIViewRepresentable {
     @Binding var rtfData: Data
     @Binding var isFocused: Bool
     @ObservedObject var context: RichTextContext
     
-    func makeUIView(context: Context) -> UITextView {
-        let textView = UITextView()
+    func makeUIView(context: Context) -> PlainPasteTextView {
+        let textView = PlainPasteTextView()
         textView.delegate = context.coordinator
         textView.allowsEditingTextAttributes = true
         textView.backgroundColor = .clear
@@ -88,12 +101,18 @@ struct RichTextEditor: UIViewRepresentable {
             textView.attributedText = NSAttributedString(string: "", attributes: [.font: UIFont.systemFont(ofSize: 18), .foregroundColor: UIColor.label])
         }
         
+        let toolbar = UIToolbar(frame: CGRect(x: 0, y: 0, width: UIScreen.main.bounds.width, height: 44))
+        let flex = UIBarButtonItem(barButtonSystemItem: .flexibleSpace, target: nil, action: nil)
+        let doneBtn = UIBarButtonItem(title: "Done", style: .done, target: context.coordinator, action: #selector(Coordinator.doneTapped))
+        toolbar.items = [flex, doneBtn]
+        textView.inputAccessoryView = toolbar
+        
         self.context.textView = textView
         
         return textView
     }
     
-    func updateUIView(_ uiView: UITextView, context: Context) {
+    func updateUIView(_ uiView: PlainPasteTextView, context: Context) {
         if self.isFocused && !uiView.isFirstResponder {
             uiView.becomeFirstResponder()
         } else if !self.isFocused && uiView.isFirstResponder {
@@ -114,7 +133,9 @@ struct RichTextEditor: UIViewRepresentable {
         }
         
         func textViewDidChange(_ textView: UITextView) {
-            parent.context.isEmpty = textView.text.isEmpty
+            DispatchQueue.main.async {
+                self.parent.context.isEmpty = textView.text.isEmpty
+            }
             saveWorkItem?.cancel()
             let workItem = DispatchWorkItem { [weak self, weak textView] in
                 guard let self = self, let tv = textView else { return }
