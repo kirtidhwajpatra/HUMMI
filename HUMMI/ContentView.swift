@@ -17,7 +17,6 @@ enum HomePhase: Equatable {
     case idle
     case recording
     case recorded(ResultViewModel)
-    case enhancing(ResultViewModel)
     case studio(ResultViewModel)
 
     static func == (lhs: HomePhase, rhs: HomePhase) -> Bool {
@@ -25,7 +24,6 @@ enum HomePhase: Equatable {
         case (.idle, .idle): return true
         case (.recording, .recording): return true
         case (.recorded(let l), .recorded(let r)): return l === r
-        case (.enhancing(let l), .enhancing(let r)): return l === r
         case (.studio(let l), .studio(let r)): return l === r
         default: return false
         }

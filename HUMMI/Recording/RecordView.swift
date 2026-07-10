@@ -32,8 +32,6 @@ struct RecordView: View {
                 recordingLayout
             case .recorded(let rVM):
                 recordedLayout(rVM)
-            case .enhancing(let rVM):
-                enhancingLayout(rVM)
             case .studio(let rVM):
                 studioLayout(rVM)
             }
@@ -122,7 +120,37 @@ struct RecordView: View {
 
             Spacer(minLength: Spacing.l)
 
-            HStack(spacing: Spacing.l) {
+            VStack(spacing: Spacing.s) {
+                Button {
+                    Task {
+                        await rVM.enhanceWithStudio()
+                        phase = .studio(rVM)
+                    }
+                } label: {
+                    if case .enhancing(let frac) = rVM.phase {
+                        HStack(spacing: Spacing.s) {
+                            ProgressView()
+                                .tint(.white)
+                            if let f = frac {
+                                Text("Enhancing \(Int(f * 100))%")
+                            } else {
+                                Text("Enhancing...")
+                            }
+                        }
+                        .font(.headline)
+                        .lineLimit(1)
+                        .frame(maxWidth: .infinity)
+                    } else {
+                        Label("Enhance", systemImage: "wand.and.stars")
+                            .font(.headline)
+                            .lineLimit(1)
+                            .frame(maxWidth: .infinity)
+                    }
+                }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.large)
+                .disabled(rVM.phase != .idle)
+                
                 Button {
                     phase = .idle
                 } label: {
@@ -134,21 +162,7 @@ struct RecordView: View {
                 .buttonStyle(.bordered)
                 .controlSize(.large)
                 .tint(.primary)
-
-                Button {
-                    phase = .enhancing(rVM)
-                    Task {
-                        await rVM.enhanceWithStudio()
-                        phase = .studio(rVM)
-                    }
-                } label: {
-                    Label("Enhance", systemImage: "wand.and.stars")
-                        .font(.headline)
-                        .lineLimit(1)
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.large)
+                .disabled(rVM.phase != .idle)
             }
             .padding(.horizontal, Spacing.l)
 
@@ -172,36 +186,7 @@ struct RecordView: View {
         }
     }
 
-    private func enhancingLayout(_ rVM: ResultViewModel) -> some View {
-        VStack(spacing: Spacing.l) {
-            Spacer()
 
-            WaveformView(peaks: rVM.peaks, tint: .accentColor, style: .bars)
-                .frame(height: 120)
-                .padding(.horizontal, Spacing.m)
-
-            VStack(spacing: Spacing.xs) {
-                if case .enhancing(let fraction) = rVM.phase, let fraction {
-                    ProgressView(value: fraction)
-                        .progressViewStyle(.linear)
-                        .tint(.accentColor)
-                        .padding(.horizontal, Spacing.xxl)
-                    Text("\(Int(fraction * 100))%")
-                        .font(.caption.monospacedDigit())
-                        .foregroundStyle(.secondary)
-                } else {
-                    ProgressView().controlSize(.large)
-                }
-
-                Text("Enhancing your vocals\u{2026}")
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
-            }
-
-            Spacer()
-        }
-        .navigationTitle("Processing")
-    }
 
     private func studioLayout(_ rVM: ResultViewModel) -> some View {
         VStack(spacing: 0) {
