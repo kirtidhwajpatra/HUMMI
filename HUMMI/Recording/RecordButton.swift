@@ -2,8 +2,9 @@
 //  RecordButton.swift
 //  HUMMI
 //
-//  The hero record control. Styled as a glowing orb that pulses based on
-//  audio input (rms) while recording.
+//  The record control, styled after the Camera shutter: a red disc inside
+//  a thin neutral ring with a comfortable gap. It gently expands on touch
+//  and morphs the disc into a rounded square while recording.
 //
 
 import SwiftUI
@@ -13,68 +14,58 @@ struct RecordButton: View {
     var rms: Float = 0
     let action: () -> Void
 
-    private let baseSize: CGFloat = 88
-    private var pulseScale: CGFloat {
-        if !isRecording { return 1.0 }
-        // Scale slightly based on volume (rms usually between 0.0 and 1.0)
-        let boost = max(0, min(CGFloat(rms) * 1.5, 0.4))
-        return 1.0 + boost
-    }
-    
+    private let ringSize: CGFloat = 72
+    private var innerSize: CGFloat { isRecording ? 32 : 60 }
+    private var innerRadius: CGFloat { isRecording ? 6 : 30 }
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        Button(action: {
-            Haptics.shared.play(.heavy)
-            action()
-        }) {
+        Button(action: action) {
             ZStack {
-                // Outer glow / pulse ring
-                if isRecording {
-                    Circle()
-                        .fill(Color.red.opacity(0.3))
-                        .frame(width: baseSize, height: baseSize)
-                        .scaleEffect(pulseScale * 1.4)
-                        .blur(radius: 12)
-                }
-                
-                // Outer border ring
+                // Outer ring
                 Circle()
-                    .strokeBorder(
-                        isRecording ? Color.red.opacity(0.8) : Color.white.opacity(0.6),
-                        lineWidth: isRecording ? 4 : 2
-                    )
-                    .frame(width: baseSize, height: baseSize)
-                    .shadow(color: isRecording ? Color.red.opacity(0.5) : Color.black.opacity(0.1), radius: 8)
+                    .stroke(Color(.systemGray4), lineWidth: 4)
+                    .frame(width: ringSize, height: ringSize)
 
-                // Inner morphing shape
-                RoundedRectangle(cornerRadius: isRecording ? 12 : baseSize / 2, style: .continuous)
-                    .fill(isRecording ? Color.red : Color.white)
-                    .frame(width: isRecording ? 36 : baseSize - 16, height: isRecording ? 36 : baseSize - 16)
-                    .shadow(color: isRecording ? .clear : Color.black.opacity(0.2), radius: 4, y: 2)
+                // Inner morphing button
+                RoundedRectangle(cornerRadius: innerRadius, style: .continuous)
+                    .fill(Color.red)
+                    .frame(width: innerSize, height: innerSize)
             }
-            .frame(width: baseSize * 1.5, height: baseSize * 1.5) // give room for the pulse
+            .frame(width: ringSize, height: ringSize)
             .contentShape(Circle())
-            // Smoothly animate the morph and color changes
-            .animation(reduceMotion ? nil : .spring(response: 0.4, dampingFraction: 0.6), value: isRecording)
-            // Animate the pulse strictly based on rms changes
-            .animation(reduceMotion ? nil : .interactiveSpring(response: 0.1, dampingFraction: 0.8), value: pulseScale)
+            // Use native snappy animation for state change
+            .animation(reduceMotion ? nil : .snappy(duration: 0.25, extraBounce: 0.1), value: isRecording)
         }
-        .buttonStyle(OrbPressStyle(reduceMotion: reduceMotion))
+        .buttonStyle(ShutterPressStyle(reduceMotion: reduceMotion))
         .accessibilityLabel(isRecording ? "Stop recording" : "Record")
         .accessibilityHint(isRecording ? "Stops and opens your take" : "Starts recording immediately")
         .accessibilityAddTraits(.startsMediaSession)
     }
 
-    /// Gently expands/contracts on touch
-    private struct OrbPressStyle: ButtonStyle {
+    /// Gently expands on touch, echoing the inviting feel of a shutter.
+    private struct ShutterPressStyle: ButtonStyle {
         let reduceMotion: Bool
         func makeBody(configuration: Configuration) -> some View {
             configuration.label
-                .scaleEffect(reduceMotion ? 1 : (configuration.isPressed ? 0.9 : 1))
-                .animation(.spring(response: 0.3, dampingFraction: 0.6), value: configuration.isPressed)
-                .opacity(configuration.isPressed ? 0.8 : 1.0)
+                .scaleEffect(reduceMotion ? 1 : (configuration.isPressed ? 1.05 : 1))
+                .animation(.spring(response: 0.3, dampingFraction: 0.6),
+                           value: configuration.isPressed)
         }
     }
 }
 
+#if DEBUG
+#Preview("Light") {
+    VStack(spacing: Spacing.xxl) {
+        RecordButton(isRecording: false) {}
+        RecordButton(isRecording: true) {}
+    }
+    .tint(.accentColor)
+}
+#Preview("Dark") {
+    RecordButton(isRecording: false) {}
+        .tint(.accentColor)
+        .preferredColorScheme(.dark)
+}
+#endif

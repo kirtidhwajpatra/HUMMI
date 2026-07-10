@@ -68,7 +68,7 @@ struct WaveformView: View {
         let spacing: CGFloat = 2
         let slot = barWidth + spacing
         let count = max(Int(size.width / slot), 1)
-        let bars = Self.downsample(peaks, to: count)
+        let bars = peaks.isEmpty ? Array(repeating: Float(0), count: count) : Self.downsample(peaks, to: count)
         guard !bars.isEmpty else { return }
         let scale: Float = normalize ? 1 / max(bars.max() ?? 1, 0.05) : 1
         let played = playedTint

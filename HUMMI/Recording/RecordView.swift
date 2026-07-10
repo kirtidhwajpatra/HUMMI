@@ -28,27 +28,22 @@ struct RecordView: View {
     private var isRecording: Bool { viewModel.isRecording }
 
     var body: some View {
-        ZStack {
-            AnimatedBackground(isRecording: isRecording)
-                .ignoresSafeArea()
-            
-            VStack(spacing: 0) {
-                switch phase {
-                case .idle:
-                    idleLayout
-                case .recording:
-                    recordingLayout
-                case .recorded(let rVM):
-                    recordedLayout(rVM)
-                case .studio(let rVM):
-                    studioLayout(rVM)
-                }
+        VStack(spacing: 0) {
+            switch phase {
+            case .idle:
+                idleLayout
+            case .recording:
+                recordingLayout
+            case .recorded(let rVM):
+                recordedLayout(rVM)
+            case .studio(let rVM):
+                studioLayout(rVM)
             }
-            .frame(maxWidth: Spacing.contentMaxWidth)
-            .frame(maxWidth: .infinity)
-            .padding(.horizontal, Spacing.l)
-            .animation(reduceMotion ? .none : .spring(response: 0.5, dampingFraction: 0.75), value: phase)
         }
+        .frame(maxWidth: Spacing.contentMaxWidth)
+        .frame(maxWidth: .infinity)
+        .padding(.horizontal, Spacing.l)
+        .animation(reduceMotion ? .none : Motion.standard, value: phase)
         .sensoryFeedback(trigger: isRecording) { _, recording in
             recording ? Haptic.recordStart : Haptic.recordStop
         }
@@ -90,17 +85,17 @@ struct RecordView: View {
                     viewModel.start()
                 }
                 .scaleEffect(showLyrics ? 0.8 : 1.0)
-                .animation(.spring(response: 0.5, dampingFraction: 0.75), value: showLyrics)
+                .animation(.snappy, value: showLyrics)
                 .transition(.opacity.combined(with: .scale(scale: 0.8)))
             }
             
             Spacer(minLength: showLyrics ? Spacing.s : Spacing.xl)
         }
-        .animation(.spring(response: 0.5, dampingFraction: 0.75), value: isLyricsFocused)
+        .animation(.snappy, value: isLyricsFocused)
         .toolbar {
-            ToolbarItemGroup(placement: .topBarTrailing) {
+            ToolbarItem(placement: .topBarLeading) {
                 Button { 
-                    withAnimation(.spring(response: 0.5, dampingFraction: 0.75)) {
+                    withAnimation(.snappy) {
                         showLyrics.toggle()
                         isLyricsFocused = showLyrics
                     }
@@ -108,8 +103,11 @@ struct RecordView: View {
                     Image(systemName: "text.quote")
                         .foregroundStyle(showLyrics ? Color.red : Color.primary)
                 }
+            }
+            ToolbarItem(placement: .topBarTrailing) {
                 Button { showImporter = true } label: {
                     Image(systemName: "square.and.arrow.down")
+                        .foregroundStyle(Color.primary)
                 }
             }
         }
@@ -132,13 +130,13 @@ struct RecordView: View {
                     viewModel.stop()
                 }
                 .scaleEffect(showLyrics ? 0.8 : 1.0)
-                .animation(.spring(response: 0.5, dampingFraction: 0.75), value: showLyrics)
+                .animation(.snappy, value: showLyrics)
                 .transition(.opacity.combined(with: .scale(scale: 0.8)))
             }
             
             Spacer(minLength: showLyrics ? Spacing.s : Spacing.xl)
         }
-        .animation(.spring(response: 0.5, dampingFraction: 0.75), value: isLyricsFocused)
+        .animation(.snappy, value: isLyricsFocused)
     }
 
     private func recordedLayout(_ rVM: ResultViewModel) -> some View {
@@ -154,78 +152,63 @@ struct RecordView: View {
                 
                 Spacer(minLength: 0)
                 
-                // Sleek Floating Action Bar
-                HStack(spacing: Spacing.m) {
-                    // Retake Button (Subtle)
+                HStack(spacing: Spacing.xl) {
+                    // Play Button
                     Button {
-                        Haptics.shared.play(.light)
-                        phase = .idle
+                        rVM.abPlayer.togglePlayPause()
                     } label: {
-                        Image(systemName: "trash")
-                            .font(.system(size: 20, weight: .semibold))
-                            .foregroundStyle(.secondary)
-                            .frame(width: 44, height: 44)
-                            .background(.ultraThinMaterial, in: Circle())
+                        Image(systemName: rVM.abPlayer.isPlaying ? "pause.fill" : "play.fill")
+                            .font(.system(size: 24, weight: .bold))
+                            .foregroundStyle(.white)
+                            .frame(width: 56, height: 56)
+                            .background(Color.primary, in: Circle())
                     }
-                    .disabled(rVM.phase != .idle)
                     
-                    // Enhance Button (Magical focus)
+                    // Enhance Button
                     Button {
-                        Haptics.shared.play(.heavy)
                         Task {
                             await rVM.enhanceWithStudio()
                             phase = .studio(rVM)
                         }
                     } label: {
-                        HStack {
-                            if case .enhancing = rVM.phase {
-                                ProgressView().tint(.white)
-                                Text("Enhancing...")
-                                    .font(.headline)
-                            } else {
-                                Image(systemName: "wand.and.stars")
-                                Text("Enhance")
-                                    .font(.headline)
-                            }
+                        if case .enhancing = rVM.phase {
+                            ProgressView().tint(.white)
+                                .frame(width: 64, height: 64)
+                                .background(Color.accentColor, in: Circle())
+                        } else {
+                            Image(systemName: "wand.and.stars")
+                                .font(.system(size: 28, weight: .bold))
+                                .foregroundStyle(.white)
+                                .frame(width: 64, height: 64)
+                                .background(Color.accentColor, in: Circle())
                         }
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, Spacing.l)
-                        .frame(height: 56)
-                        .background(
-                            LinearGradient(colors: [Color.accentColor, Color.purple], startPoint: .topLeading, endPoint: .bottomTrailing),
-                            in: Capsule()
-                        )
-                        .shadow(color: Color.accentColor.opacity(0.4), radius: 8, y: 4)
                     }
                     .disabled(rVM.phase != .idle)
 
-                    // Play Button
+                    // Retake Button
                     Button {
-                        Haptics.shared.play(.light)
-                        rVM.abPlayer.togglePlayPause()
+                        phase = .idle
                     } label: {
-                        Image(systemName: rVM.abPlayer.isPlaying ? "pause.fill" : "play.fill")
-                            .font(.system(size: 22, weight: .bold))
-                            .foregroundStyle(.primary)
+                        Image(systemName: "xmark")
+                            .font(.system(size: 24, weight: .bold))
+                            .foregroundStyle(.white)
                             .frame(width: 56, height: 56)
-                            .background(.ultraThinMaterial, in: Circle())
+                            .background(Color.secondary, in: Circle())
                     }
+                    .disabled(rVM.phase != .idle)
                 }
-                .padding(.horizontal, Spacing.m)
-                .padding(.vertical, Spacing.s)
-                .background(.ultraThinMaterial, in: Capsule())
                 .scaleEffect(showLyrics ? 0.8 : 1.0)
-                .animation(.spring(response: 0.5, dampingFraction: 0.75), value: showLyrics)
+                .animation(.snappy, value: showLyrics)
                 .transition(.opacity.combined(with: .scale(scale: 0.8)))
             }
             
             Spacer(minLength: showLyrics ? Spacing.s : Spacing.xl)
         }
-        .animation(.spring(response: 0.5, dampingFraction: 0.75), value: isLyricsFocused)
+        .animation(.snappy, value: isLyricsFocused)
         .toolbar {
-            ToolbarItemGroup(placement: .topBarTrailing) {
+            ToolbarItem(placement: .topBarLeading) {
                 Button { 
-                    withAnimation(.spring(response: 0.5, dampingFraction: 0.75)) {
+                    withAnimation(.snappy) {
                         showLyrics.toggle()
                         isLyricsFocused = showLyrics
                     }
@@ -233,8 +216,11 @@ struct RecordView: View {
                     Image(systemName: "text.quote")
                         .foregroundStyle(showLyrics ? Color.red : Color.primary)
                 }
+            }
+            ToolbarItem(placement: .topBarTrailing) {
                 Button { showImporter = true } label: {
                     Image(systemName: "square.and.arrow.down")
+                        .foregroundStyle(Color.primary)
                 }
             }
         }
