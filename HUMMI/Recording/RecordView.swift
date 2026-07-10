@@ -229,39 +229,42 @@ struct RecordView: View {
                             }
                     )
                 }
-                .frame(height: 140)
+                .frame(height: 180)
                 .padding(.horizontal, Spacing.m)
 
                 // Dedicated Playback Controls
-                HStack(spacing: Spacing.xl) {
+                HStack(spacing: Spacing.xxl) {
                     Text(timeString(rVM.abPlayer.currentTime))
-                        .font(.caption.monospacedDigit())
+                        .font(.callout.monospacedDigit())
                         .foregroundStyle(.secondary)
                     
                     Button {
                         rVM.abPlayer.togglePlayPause()
                     } label: {
                         Image(systemName: rVM.abPlayer.isPlaying ? "pause.circle.fill" : "play.circle.fill")
-                            .font(.system(size: 52))
+                            .font(.system(size: 64))
                             .foregroundStyle(Color.accentColor)
                     }
                     .buttonStyle(.plain)
                     .accessibilityLabel(rVM.abPlayer.isPlaying ? "Pause" : "Play")
                     
                     Text(timeString(rVM.abPlayer.duration))
-                        .font(.caption.monospacedDigit())
+                        .font(.callout.monospacedDigit())
                         .foregroundStyle(.secondary)
                 }
-                .padding(.bottom, Spacing.l)
+                .padding(.bottom, Spacing.xl)
             }
-            .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: Radius.sheet, style: .continuous))
+            .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 32, style: .continuous))
+            .shadow(color: Color.black.opacity(0.05), radius: 20, x: 0, y: 10)
             .padding(Spacing.m)
             
+            Spacer()
+            
             // Filter Carousel
-            VStack(alignment: .leading, spacing: Spacing.xs) {
+            VStack(alignment: .leading, spacing: Spacing.m) {
                 Text("Tone Filters")
-                    .font(.headline)
-                    .padding(.horizontal, Spacing.m)
+                    .font(.title3.weight(.bold))
+                    .padding(.horizontal, Spacing.l)
                 
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: Spacing.s) {
@@ -270,22 +273,22 @@ struct RecordView: View {
                             Button {
                                 Task { await rVM.selectPreset(preset) }
                             } label: {
-                                VStack(spacing: Spacing.xs) {
+                                VStack(spacing: Spacing.s) {
                                     Image(systemName: preset.systemImage)
                                         .font(.title2)
                                     Text(preset.title)
                                         .font(.caption.weight(.medium))
                                 }
-                                .frame(width: 80, height: 80)
+                                .frame(width: 88, height: 88)
                                 .foregroundStyle(isSelected ? Color.white : Color.primary)
                                 .background(
                                     isSelected
                                         ? AnyShapeStyle(LinearGradient(colors: toneColors(preset), startPoint: .topLeading, endPoint: .bottomTrailing))
                                         : AnyShapeStyle(Color(.secondarySystemGroupedBackground)),
-                                    in: RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                    in: RoundedRectangle(cornerRadius: 20, style: .continuous)
                                 )
                                 .overlay(
-                                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                    RoundedRectangle(cornerRadius: 20, style: .continuous)
                                         .stroke(isSelected ? Color.clear : Color(.separator), lineWidth: 0.5)
                                 )
                             }
@@ -293,30 +296,26 @@ struct RecordView: View {
                             .disabled(rVM.isRendering)
                         }
                     }
-                    .padding(.horizontal, Spacing.m)
+                    .padding(.horizontal, Spacing.l)
                 }
             }
-            .padding(.top, Spacing.s)
-            
-            Spacer()
+            .padding(.bottom, Spacing.xl)
         }
         .navigationTitle("Studio")
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
                 Button("Discard") { phase = .idle }
             }
-            ToolbarItem(placement: .topBarTrailing) {
-                HStack(spacing: Spacing.m) {
-                    Button {
-                        showTuner = true
-                    } label: {
-                        Image(systemName: "slider.horizontal.3")
-                    }
-                    .disabled(rVM.isRendering)
-                    
-                    Button("Save") { path.append(.save(rVM.originalURL)) }
-                        .fontWeight(.semibold)
+            ToolbarItemGroup(placement: .topBarTrailing) {
+                Button {
+                    showTuner = true
+                } label: {
+                    Image(systemName: "slider.horizontal.3")
                 }
+                .disabled(rVM.isRendering)
+                
+                Button("Save") { path.append(.save(rVM.originalURL)) }
+                    .fontWeight(.semibold)
             }
         }
         .sheet(isPresented: $showTuner) {
