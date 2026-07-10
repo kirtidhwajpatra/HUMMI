@@ -82,22 +82,26 @@ struct RecordView: View {
 
             lyricsCard
 
-            recordingSurface
-
-            Spacer(minLength: showLyrics ? Spacing.s : Spacing.l)
-
-            RecordButton(isRecording: false) {
-                viewModel.start()
+            if !isLyricsFocused {
+                recordingSurface
+                
+                Spacer(minLength: showLyrics ? Spacing.s : Spacing.l)
+                
+                RecordButton(isRecording: false) {
+                    viewModel.start()
+                }
+                .scaleEffect(showLyrics ? 0.5 : 1.0)
+                .animation(.snappy, value: showLyrics)
+                .transition(.opacity.combined(with: .scale(scale: 0.8)))
             }
-            .scaleEffect(showLyrics ? 0.5 : 1.0)
-            .animation(.snappy, value: showLyrics)
-
+            
             if !showLyrics {
                 notice
             }
             
             Spacer(minLength: showLyrics ? Spacing.s : Spacing.xl)
         }
+        .animation(.snappy, value: isLyricsFocused)
         .navigationTitle("Record")
         .toolbar {
             ToolbarItemGroup(placement: .topBarTrailing) {
@@ -125,22 +129,26 @@ struct RecordView: View {
 
             lyricsCard
 
-            recordingSurface
-
-            Spacer(minLength: showLyrics ? Spacing.s : Spacing.l)
-
-            RecordButton(isRecording: true, rms: viewModel.rms) {
-                viewModel.stop()
+            if !isLyricsFocused {
+                recordingSurface
+                
+                Spacer(minLength: showLyrics ? Spacing.s : Spacing.l)
+                
+                RecordButton(isRecording: true, rms: viewModel.rms) {
+                    viewModel.stop()
+                }
+                .scaleEffect(showLyrics ? 0.5 : 1.0)
+                .animation(.snappy, value: showLyrics)
+                .transition(.opacity.combined(with: .scale(scale: 0.8)))
             }
-            .scaleEffect(showLyrics ? 0.5 : 1.0)
-            .animation(.snappy, value: showLyrics)
-
+            
             if !showLyrics {
                 notice
             }
             
             Spacer(minLength: showLyrics ? Spacing.s : Spacing.xl)
         }
+        .animation(.snappy, value: isLyricsFocused)
         .navigationTitle("Listening...")
     }
 
@@ -416,8 +424,8 @@ struct RecordView: View {
                             Text("Paste your recording script")
                                 .font(.system(size: 18))
                                 .foregroundStyle(Color(.tertiaryLabel))
-                                .padding(.horizontal, Spacing.s + 4)
-                                .padding(.top, Spacing.s + 8)
+                                .padding(.horizontal, Spacing.s + 5)
+                                .padding(.top, 8)
                                 .allowsHitTesting(false)
                         }
                         RichTextEditor(rtfData: $lyricsData, isFocused: $isLyricsFocused, context: richTextContext)
