@@ -52,7 +52,6 @@ struct SaveAudioView: View {
                         .foregroundStyle(.secondary)
                     
                     Button {
-                        AppInteraction.pulse()
                         viewModel.abPlayer.togglePlayPause()
                     } label: {
                         Image(systemName: viewModel.abPlayer.isPlaying ? "pause.fill" : "play.fill")
@@ -76,7 +75,7 @@ struct SaveAudioView: View {
         }
         .frame(maxWidth: Spacing.contentMaxWidth)
         .frame(maxWidth: .infinity)
-        .background(DynamicBackground())
+        .background(Color(.systemBackground))
         .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -113,46 +112,26 @@ struct SaveAudioView: View {
 
     private var exportButtons: some View {
         VStack(spacing: Spacing.s) {
-            HStack(spacing: Spacing.l) {
-                Button {
-                    Task { await viewModel.saveAudio() }
-                } label: {
-                    if viewModel.isExporting && viewModel.videoProgress == nil {
-                        ProgressView()
-                            .frame(maxWidth: .infinity)
-                    } else {
-                        Label("Save Audio", systemImage: "arrow.down.document")
-                            .frame(maxWidth: .infinity)
-                    }
+            Button {
+                Task { await viewModel.saveAudio() }
+            } label: {
+                if viewModel.isExporting {
+                    ProgressView()
+                        .frame(maxWidth: .infinity)
+                } else {
+                    Label("Save Audio", systemImage: "arrow.down.document")
+                        .frame(maxWidth: .infinity)
                 }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.large)
-                .disabled(viewModel.isExporting)
-
-                Button {
-                    Task { await viewModel.shareVideo() }
-                } label: {
-                    if viewModel.videoProgress != nil {
-                        ProgressView()
-                            .frame(maxWidth: .infinity)
-                    } else {
-                        Label("Share Video", systemImage: "square.and.arrow.up")
-                            .frame(maxWidth: .infinity)
-                    }
-                }
-                .buttonStyle(.bordered)
-                .controlSize(.large)
-                .foregroundStyle(.primary)
-                .disabled(viewModel.isExporting)
             }
+            .buttonStyle(.borderedProminent)
+            .controlSize(.large)
+            .disabled(viewModel.isExporting)
 
-            if let progress = viewModel.videoProgress {
-                ProgressPill(label: "Rendering video \(Int(progress * 100))%", value: progress)
-            } else if viewModel.isExporting {
+            if viewModel.isExporting {
                 ProgressPill(label: "Exporting\u{2026}")
             }
         }
-        .animation(Motion.standard, value: viewModel.videoProgress != nil)
+        .animation(Motion.standard, value: viewModel.isExporting)
     }
 
     private func timeString(_ time: TimeInterval) -> String {

@@ -48,51 +48,47 @@ struct ContentView: View {
     #endif
 
     var body: some View {
-        ZStack {
-            DynamicBackground()
-            
-            TabView(selection: $selectedTab) {
-                NavigationStack(path: $homePath) {
-                    sessionContent
-                        .navigationDestination(for: AppRoute.self) { route in
-                            switch route {
-                            case .save(let url):
-                                SaveAudioView(url: url)
-                            }
-                        }
-                }
-                .tabItem {
-                    Label("Record", systemImage: "mic.fill")
-                }
-                .tag(0)
-                
-                NavigationStack(path: $libraryPath) {
-                    RecordingsListView(path: $libraryPath) { selectedURL in
-                        let rVM = ResultViewModel(originalURL: selectedURL)
-                        homePhase = .studio(rVM)
-                        selectedTab = 0
-                        libraryPath.removeAll()
-                    }
+        TabView(selection: $selectedTab) {
+            NavigationStack(path: $homePath) {
+                sessionContent
                     .navigationDestination(for: AppRoute.self) { route in
                         switch route {
                         case .save(let url):
                             SaveAudioView(url: url)
                         }
                     }
-                }
-                .tabItem {
-                    Label("Library", systemImage: "list.bullet")
-                }
-                .tag(1)
-                
-                NavigationStack {
-                    SettingsView()
-                }
-                .tabItem {
-                    Label("Settings", systemImage: "gearshape.fill")
-                }
-                .tag(2)
             }
+            .tabItem {
+                Label("Record", systemImage: "mic.fill")
+            }
+            .tag(0)
+            
+            NavigationStack(path: $libraryPath) {
+                RecordingsListView(path: $libraryPath) { selectedURL in
+                    let rVM = ResultViewModel(originalURL: selectedURL)
+                    homePhase = .studio(rVM)
+                    selectedTab = 0
+                    libraryPath.removeAll()
+                }
+                .navigationDestination(for: AppRoute.self) { route in
+                    switch route {
+                    case .save(let url):
+                        SaveAudioView(url: url)
+                    }
+                }
+            }
+            .tabItem {
+                Label("Library", systemImage: "list.bullet")
+            }
+            .tag(1)
+            
+            NavigationStack {
+                SettingsView()
+            }
+            .tabItem {
+                Label("Settings", systemImage: "gearshape.fill")
+            }
+            .tag(2)
         }
         .preferredColorScheme(appTheme.colorScheme)
     }

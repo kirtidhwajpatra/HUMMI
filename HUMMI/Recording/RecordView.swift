@@ -42,7 +42,6 @@ struct RecordView: View {
         }
         .frame(maxWidth: Spacing.contentMaxWidth)
         .frame(maxWidth: .infinity)
-        .background(DynamicBackground())
         .padding(.horizontal, Spacing.l)
         .animation(reduceMotion ? .none : Motion.standard, value: phase)
         .sensoryFeedback(trigger: isRecording) { _, recording in
@@ -281,7 +280,6 @@ struct RecordView: View {
                         .foregroundStyle(.secondary)
                     
                     Button {
-                        AppInteraction.pulse()
                         rVM.abPlayer.togglePlayPause()
                     } label: {
                         Image(systemName: rVM.abPlayer.isPlaying ? "pause.fill" : "play.fill")
@@ -327,7 +325,6 @@ struct RecordView: View {
                         ForEach(StudioPreset.allCases, id: \.rawValue) { preset in
                             let isSelected = rVM.selectedPreset == preset
                             Button {
-                                AppInteraction.pulse()
                                 Task { await rVM.selectPreset(preset) }
                             } label: {
                                 VStack(spacing: Spacing.s) {
@@ -514,7 +511,7 @@ struct RecordView: View {
     #endif
 
     private var ambientGlow: some View {
-        DynamicBackground()
+        Color(.systemBackground)
             .ignoresSafeArea()
     }
 }

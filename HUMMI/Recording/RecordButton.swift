@@ -20,10 +20,7 @@ struct RecordButton: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        Button {
-            AppInteraction.pulse()
-            action()
-        } label: {
+        Button(action: action) {
             ZStack {
                 // Outer ring
                 Circle()
