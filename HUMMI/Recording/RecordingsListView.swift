@@ -42,7 +42,9 @@ struct RecordingsListView: View {
                     message: "Record a take or import an audio file.")
             }
         }
-        .navigationTitle("")
+        .scrollContentBackground(.hidden)
+        .background(DynamicBackground())
+        .navigationTitle("Recordings")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .principal) {

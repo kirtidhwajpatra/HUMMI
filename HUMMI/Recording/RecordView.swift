@@ -42,6 +42,7 @@ struct RecordView: View {
         }
         .frame(maxWidth: Spacing.contentMaxWidth)
         .frame(maxWidth: .infinity)
+        .background(DynamicBackground())
         .padding(.horizontal, Spacing.l)
         .animation(reduceMotion ? .none : Motion.standard, value: phase)
         .sensoryFeedback(trigger: isRecording) { _, recording in

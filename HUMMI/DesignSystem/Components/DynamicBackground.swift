@@ -27,25 +27,26 @@ struct DynamicBackground: View {
             // Animated Gradients
             GeometryReader { proxy in
                 ZStack {
-                    // Blob 1
-                    RadialGradient(
-                        gradient: Gradient(colors: [Color.accentColor.opacity(0.4), Color.clear]),
-                        center: .center,
-                        startRadius: 10,
-                        endRadius: proxy.size.width * 1.2
-                    )
-                    .offset(x: isAnimating ? -proxy.size.width * 0.3 : proxy.size.width * 0.3,
-                            y: isAnimating ? -proxy.size.height * 0.3 : proxy.size.height * 0.2)
+                    // Blob 1 (Accent)
+                    Circle()
+                        .fill(Color.accentColor.opacity(0.35))
+                        .frame(width: proxy.size.width * 1.5, height: proxy.size.width * 1.5)
+                        .offset(x: isAnimating ? -proxy.size.width * 0.3 : proxy.size.width * 0.3,
+                                y: isAnimating ? -proxy.size.height * 0.3 : proxy.size.height * 0.2)
                     
-                    // Blob 2
-                    RadialGradient(
-                        gradient: Gradient(colors: [Color.accentColor.opacity(0.35), Color.clear]),
-                        center: .center,
-                        startRadius: 10,
-                        endRadius: proxy.size.width * 1.0
-                    )
-                    .offset(x: isAnimating ? proxy.size.width * 0.4 : -proxy.size.width * 0.2,
-                            y: isAnimating ? proxy.size.height * 0.4 : -proxy.size.height * 0.4)
+                    // Blob 2 (Purple)
+                    Circle()
+                        .fill(Color.purple.opacity(0.3))
+                        .frame(width: proxy.size.width * 1.2, height: proxy.size.width * 1.2)
+                        .offset(x: isAnimating ? proxy.size.width * 0.4 : -proxy.size.width * 0.2,
+                                y: isAnimating ? proxy.size.height * 0.4 : -proxy.size.height * 0.4)
+                    
+                    // Blob 3 (Orange)
+                    Circle()
+                        .fill(Color.orange.opacity(0.25))
+                        .frame(width: proxy.size.width * 1.0, height: proxy.size.width * 1.0)
+                        .offset(x: isAnimating ? -proxy.size.width * 0.2 : proxy.size.width * 0.4,
+                                y: isAnimating ? proxy.size.height * 0.2 : -proxy.size.height * 0.3)
                 }
                 .blur(radius: 80)
             }
