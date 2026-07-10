@@ -399,6 +399,7 @@ struct RecordView: View {
         .padding(.horizontal, Spacing.l)
         .frame(maxWidth: .infinity)
         .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: showLyrics ? 24 : 32, style: .continuous))
+        .padding(.horizontal, showLyrics ? 0 : Spacing.m)
         .animation(reduceMotion ? nil : .snappy, value: isRecording)
         .animation(.snappy, value: showLyrics)
     }
