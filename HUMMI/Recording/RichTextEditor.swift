@@ -71,7 +71,7 @@ class RichTextContext: ObservableObject {
 
 struct RichTextEditor: UIViewRepresentable {
     @Binding var rtfData: Data
-    var isFocused: FocusState<Bool>.Binding
+    @Binding var isFocused: Bool
     @ObservedObject var context: RichTextContext
     
     func makeUIView(context: Context) -> UITextView {
@@ -94,9 +94,9 @@ struct RichTextEditor: UIViewRepresentable {
     }
     
     func updateUIView(_ uiView: UITextView, context: Context) {
-        if self.isFocused.wrappedValue && !uiView.isFirstResponder {
+        if self.isFocused && !uiView.isFirstResponder {
             uiView.becomeFirstResponder()
-        } else if !self.isFocused.wrappedValue && uiView.isFirstResponder {
+        } else if !self.isFocused && uiView.isFirstResponder {
             uiView.resignFirstResponder()
         }
     }
@@ -127,14 +127,14 @@ struct RichTextEditor: UIViewRepresentable {
         }
         
         func textViewDidBeginEditing(_ textView: UITextView) {
-            if !parent.isFocused.wrappedValue {
-                parent.isFocused.wrappedValue = true
+            if !parent.isFocused {
+                parent.isFocused = true
             }
         }
         
         func textViewDidEndEditing(_ textView: UITextView) {
-            if parent.isFocused.wrappedValue {
-                parent.isFocused.wrappedValue = false
+            if parent.isFocused {
+                parent.isFocused = false
             }
             saveWorkItem?.cancel()
             if let data = try? textView.attributedText.data(from: NSRange(location: 0, length: textView.attributedText.length), documentAttributes: [.documentType: NSAttributedString.DocumentType.rtf]) {
@@ -143,7 +143,7 @@ struct RichTextEditor: UIViewRepresentable {
         }
         
         @objc func doneTapped() {
-            parent.isFocused.wrappedValue = false
+            parent.isFocused = false
         }
     }
 }

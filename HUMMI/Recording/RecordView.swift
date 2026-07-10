@@ -22,7 +22,7 @@ struct RecordView: View {
     @AppStorage("savedLyricsData") private var lyricsData: Data = Data()
     @StateObject private var richTextContext = RichTextContext()
     @State private var showLyrics: Bool = false
-    @FocusState private var isLyricsFocused: Bool
+    @State private var isLyricsFocused: Bool = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private var isRecording: Bool { viewModel.isRecording }
