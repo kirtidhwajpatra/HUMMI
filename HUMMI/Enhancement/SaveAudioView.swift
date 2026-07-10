@@ -36,7 +36,7 @@ struct SaveAudioView: View {
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(Color.accentColor)
                     
-                    WaveformView(peaks: viewModel.peaks, tint: .accentColor, style: .line)
+                    WaveformView(peaks: viewModel.peaks, tint: .accentColor, style: .bars)
                         .frame(height: 120)
                 }
                 .padding(.horizontal, Spacing.m)

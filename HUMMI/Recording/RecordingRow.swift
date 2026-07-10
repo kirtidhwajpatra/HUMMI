@@ -44,7 +44,7 @@ struct RecordingRow: View {
                         peaks: item.peaks,
                         tint: item.isEnhanced ? Color.accentColor.opacity(0.8) : Color(.systemGray3),
                         progress: playbackProgress,
-                        style: isPlaying ? .line : .bars,
+                        style: .bars,
                         normalize: true)
                         .frame(width: 64, height: 24)
 
