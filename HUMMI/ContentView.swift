@@ -9,7 +9,6 @@ import SwiftUI
 
 /// Where the app's single navigation stack can go.
 enum AppRoute: Hashable {
-    case library
     case save(URL)
 }
 
@@ -33,7 +32,9 @@ enum HomePhase: Equatable {
 struct ContentView: View {
     @State private var audioSession = AudioSessionManager()
     @State private var recording = RecordingViewModel()
-    @State private var path: [AppRoute] = []
+    @State private var selectedTab = 0
+    @State private var homePath: [AppRoute] = []
+    @State private var libraryPath: [AppRoute] = []
     @State private var homePhase: HomePhase = .idle
     @Namespace private var transition
     #if DEBUG
@@ -45,20 +46,60 @@ struct ContentView: View {
     #endif
 
     var body: some View {
-        NavigationStack(path: $path) {
-            sessionContent
+        TabView(selection: $selectedTab) {
+            NavigationStack(path: $homePath) {
+                sessionContent
+                    .navigationDestination(for: AppRoute.self) { route in
+                        switch route {
+                        case .save(let url):
+                            SaveAudioView(url: url)
+                        }
+                    }
+            }
+            .tabItem {
+                Label("Record", systemImage: "mic.fill")
+            }
+            .tag(0)
+            
+            NavigationStack(path: $libraryPath) {
+                RecordingsListView(path: $libraryPath) { selectedURL in
+                    let rVM = ResultViewModel(originalURL: selectedURL)
+                    homePhase = .studio(rVM)
+                    selectedTab = 0
+                    libraryPath.removeAll()
+                }
                 .navigationDestination(for: AppRoute.self) { route in
                     switch route {
-                    case .library:
-                        RecordingsListView(path: $path) { selectedURL in
-                            let rVM = ResultViewModel(originalURL: selectedURL)
-                            homePhase = .studio(rVM)
-                            path.removeAll() // Pop to root
-                        }
                     case .save(let url):
                         SaveAudioView(url: url)
                     }
                 }
+            }
+            .tabItem {
+                Label("Library", systemImage: "list.bullet")
+            }
+            .tag(1)
+            
+            NavigationStack {
+                VStack {
+                    Image(systemName: "gearshape")
+                        .font(.system(size: 64))
+                        .foregroundStyle(.secondary)
+                        .padding(.bottom)
+                    Text("Settings coming soon")
+                        .font(.headline)
+                    Text("Configure your audio inputs, default export format, and app theme.")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal)
+                }
+                .navigationTitle("Settings")
+            }
+            .tabItem {
+                Label("Settings", systemImage: "gearshape.fill")
+            }
+            .tag(2)
         }
     }
 
@@ -69,16 +110,10 @@ struct ContentView: View {
                 ProgressView("Preparing microphone…")
 
             case .ready, .routeChanged, .interrupted:
-                if audioSession.state == .interrupted {
-                    Text("Audio paused by a call or another app.")
-                        .font(.dsCallout)
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
-                }
                 RecordView(
                     viewModel: recording,
                     phase: $homePhase,
-                    path: $path,
+                    path: $homePath,
                     namespace: transition,
                     onImportFile: handleImport
                 )
@@ -104,7 +139,7 @@ struct ContentView: View {
             _ = await audioSession.requestPermissionAndActivate()
             #if DEBUG
             if ProcessInfo.processInfo.arguments.contains("--open-recordings") {
-                path = [.library]
+                selectedTab = 1
             }
             if ProcessInfo.processInfo.arguments.contains("--result-first"),
                let first = try? RecordingLibrary.listRecordings().first?.url {

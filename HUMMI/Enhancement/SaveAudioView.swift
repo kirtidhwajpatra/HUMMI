@@ -62,16 +62,6 @@ struct SaveAudioView: View {
         .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                NavigationLink(value: AppRoute.library) {
-                    HStack(spacing: Spacing.xxs) {
-                        Image(systemName: "list.bullet")
-                        Text("Playlist")
-                    }
-                    .foregroundStyle(.secondary)
-                }
-                .accessibilityLabel("Playlist")
-            }
         }
         .sheet(item: shareBinding) { item in
             ShareSheet(url: item.url)

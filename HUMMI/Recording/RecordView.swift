@@ -106,9 +106,6 @@ struct RecordView: View {
                 Button { showImporter = true } label: {
                     Image(systemName: "square.and.arrow.down")
                 }
-                NavigationLink(value: AppRoute.library) {
-                    Image(systemName: "list.bullet")
-                }
             }
         }
     }
@@ -218,9 +215,6 @@ struct RecordView: View {
                 }
                 Button { showImporter = true } label: {
                     Image(systemName: "square.and.arrow.down")
-                }
-                NavigationLink(value: AppRoute.library) {
-                    Image(systemName: "list.bullet")
                 }
             }
         }
