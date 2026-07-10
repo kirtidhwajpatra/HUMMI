@@ -19,6 +19,9 @@ struct RecordView: View {
     @State private var showImporter = false
     @State private var showTuner = false
     @State private var scrubFocus: Double? = nil
+    @AppStorage("savedLyrics") private var lyricsText: String = ""
+    @State private var showLyrics: Bool = false
+    @FocusState private var isLyricsFocused: Bool
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private var isRecording: Bool { viewModel.isRecording }
@@ -68,6 +71,8 @@ struct RecordView: View {
         VStack(spacing: Spacing.xl) {
             Spacer(minLength: Spacing.l)
 
+            lyricsCard
+
             recordingSurface
 
             Spacer(minLength: Spacing.l)
@@ -83,6 +88,14 @@ struct RecordView: View {
         .navigationTitle("Record")
         .toolbar {
             ToolbarItemGroup(placement: .topBarTrailing) {
+                Button { 
+                    withAnimation(.snappy) {
+                        showLyrics.toggle()
+                        isLyricsFocused = showLyrics
+                    }
+                } label: {
+                    Image(systemName: showLyrics ? "text.quote.fill" : "text.quote")
+                }
                 Button { showImporter = true } label: {
                     Image(systemName: "square.and.arrow.down")
                 }
@@ -96,6 +109,8 @@ struct RecordView: View {
     private var recordingLayout: some View {
         VStack(spacing: Spacing.xl) {
             Spacer(minLength: Spacing.l)
+
+            lyricsCard
 
             recordingSurface
 
@@ -354,6 +369,28 @@ struct RecordView: View {
                     .padding(.top, Spacing.m)
                     .padding(.horizontal, Spacing.m)
                     .transition(.opacity)
+            }
+        }
+    }
+
+    private var lyricsCard: some View {
+        Group {
+            if showLyrics {
+                TextEditor(text: $lyricsText)
+                    .focused($isLyricsFocused)
+                    .font(.body)
+                    .scrollContentBackground(.hidden)
+                    .padding(Spacing.m)
+                    .frame(maxHeight: 250)
+                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 24, style: .continuous)
+                            .stroke(Color.white.opacity(0.3), lineWidth: 1)
+                            .blendMode(.overlay)
+                    )
+                    .shadow(color: Color.black.opacity(0.05), radius: 10, x: 0, y: 5)
+                    .padding(.horizontal, Spacing.m)
+                    .transition(.move(edge: .top).combined(with: .opacity).combined(with: .scale(scale: 0.95)))
             }
         }
     }
