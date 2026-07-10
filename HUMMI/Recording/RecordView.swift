@@ -19,7 +19,8 @@ struct RecordView: View {
     @State private var showImporter = false
     @State private var showTuner = false
     @State private var scrubFocus: Double? = nil
-    @AppStorage("savedLyrics") private var lyricsText: String = ""
+    @AppStorage("savedLyricsData") private var lyricsData: Data = Data()
+    @StateObject private var richTextContext = RichTextContext()
     @State private var showLyrics: Bool = false
     @FocusState private var isLyricsFocused: Bool
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -68,22 +69,26 @@ struct RecordView: View {
     // MARK: - Layouts
 
     private var idleLayout: some View {
-        VStack(spacing: Spacing.xl) {
-            Spacer(minLength: Spacing.l)
+        VStack(spacing: showLyrics ? Spacing.s : Spacing.xl) {
+            Spacer(minLength: showLyrics ? 0 : Spacing.l)
 
             lyricsCard
 
             recordingSurface
 
-            Spacer(minLength: Spacing.l)
+            Spacer(minLength: showLyrics ? Spacing.s : Spacing.l)
 
             RecordButton(isRecording: false) {
                 viewModel.start()
             }
+            .scaleEffect(showLyrics ? 0.7 : 1.0)
+            .animation(.snappy, value: showLyrics)
 
-            notice
+            if !showLyrics {
+                notice
+            }
             
-            Spacer(minLength: Spacing.xl)
+            Spacer(minLength: showLyrics ? Spacing.s : Spacing.xl)
         }
         .navigationTitle("Record")
         .toolbar {
@@ -107,22 +112,26 @@ struct RecordView: View {
     }
 
     private var recordingLayout: some View {
-        VStack(spacing: Spacing.xl) {
-            Spacer(minLength: Spacing.l)
+        VStack(spacing: showLyrics ? Spacing.s : Spacing.xl) {
+            Spacer(minLength: showLyrics ? 0 : Spacing.l)
 
             lyricsCard
 
             recordingSurface
 
-            Spacer(minLength: Spacing.l)
+            Spacer(minLength: showLyrics ? Spacing.s : Spacing.l)
 
             RecordButton(isRecording: true, rms: viewModel.rms) {
                 viewModel.stop()
             }
+            .scaleEffect(showLyrics ? 0.7 : 1.0)
+            .animation(.snappy, value: showLyrics)
 
-            notice
+            if !showLyrics {
+                notice
+            }
             
-            Spacer(minLength: Spacing.xl)
+            Spacer(minLength: showLyrics ? Spacing.s : Spacing.xl)
         }
         .navigationTitle("Listening...")
     }
@@ -336,9 +345,9 @@ struct RecordView: View {
 
 
     private var recordingSurface: some View {
-        VStack(spacing: Spacing.xl) {
+        VStack(spacing: showLyrics ? Spacing.s : Spacing.xl) {
             Text(elapsedText)
-                .font(.system(size: 64, weight: .semibold, design: .rounded).monospacedDigit())
+                .font(.system(size: showLyrics ? 32 : 64, weight: .semibold, design: .rounded).monospacedDigit())
                 .foregroundStyle(isRecording ? Color.primary : Color(.tertiaryLabel))
                 .contentTransition(.numericText())
                 .accessibilityLabel(isRecording ? "Recording time" : "Ready")
@@ -348,15 +357,16 @@ struct RecordView: View {
                 level: CGFloat(viewModel.rms),
                 isRecording: isRecording,
                 tint: isRecording ? .accentColor : Color(.systemGray3))
-                .frame(height: 84)
+                .frame(height: showLyrics ? 40 : 84)
                 .waveformTransitionSource(in: namespace)
         }
-        .padding(.vertical, Spacing.xl)
+        .padding(.vertical, showLyrics ? Spacing.s : Spacing.xl)
         .padding(.horizontal, Spacing.l)
         .frame(maxWidth: .infinity)
-        .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 32, style: .continuous))
+        .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: showLyrics ? 16 : 32, style: .continuous))
         .padding(.horizontal, Spacing.m)
         .animation(reduceMotion ? nil : .snappy, value: isRecording)
+        .animation(.snappy, value: showLyrics)
     }
 
     private var notice: some View {
@@ -376,21 +386,33 @@ struct RecordView: View {
     private var lyricsCard: some View {
         Group {
             if showLyrics {
-                TextEditor(text: $lyricsText)
-                    .focused($isLyricsFocused)
-                    .font(.body)
-                    .scrollContentBackground(.hidden)
-                    .padding(Spacing.m)
-                    .frame(maxHeight: 250)
-                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 24, style: .continuous)
-                            .stroke(Color.white.opacity(0.3), lineWidth: 1)
-                            .blendMode(.overlay)
-                    )
-                    .shadow(color: Color.black.opacity(0.05), radius: 10, x: 0, y: 5)
+                VStack(spacing: 0) {
+                    HStack {
+                        Button { richTextContext.changeFontSize(increase: false) } label: { Image(systemName: "textformat.size.smaller") }
+                        Button { richTextContext.changeFontSize(increase: true) } label: { Image(systemName: "textformat.size.larger") }
+                        Spacer()
+                        Button { richTextContext.toggleBold() } label: { Image(systemName: "bold") }
+                        ColorPicker("", selection: Binding(get: { .black }, set: { c in richTextContext.changeColor(UIColor(c)) })).labelsHidden()
+                    }
                     .padding(.horizontal, Spacing.m)
-                    .transition(.move(edge: .top).combined(with: .opacity).combined(with: .scale(scale: 0.95)))
+                    .padding(.vertical, Spacing.s)
+                    .background(Color(.secondarySystemBackground))
+                    .clipShape(RoundedRectangle(cornerRadius: 16))
+                    .padding(Spacing.s)
+                    
+                    RichTextEditor(rtfData: $lyricsData, isFocused: $isLyricsFocused, context: richTextContext)
+                        .padding(.horizontal, Spacing.s)
+                }
+                .frame(maxHeight: .infinity)
+                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 24, style: .continuous)
+                        .stroke(Color.white.opacity(0.3), lineWidth: 1)
+                        .blendMode(.overlay)
+                )
+                .shadow(color: Color.black.opacity(0.05), radius: 10, x: 0, y: 5)
+                .padding(.horizontal, Spacing.m)
+                .transition(.move(edge: .top).combined(with: .opacity).combined(with: .scale(scale: 0.95)))
             }
         }
     }
