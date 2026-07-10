@@ -118,14 +118,25 @@ struct RecordView: View {
 
     private func recordedLayout(_ rVM: ResultViewModel) -> some View {
         VStack(spacing: Spacing.xl) {
-            Text("Review your take")
-                .font(.largeTitle.weight(.bold))
-                .padding(.top, Spacing.l)
-                
-            WaveformView(peaks: rVM.peaks, tint: Color(.systemGray3), style: .bars)
-                .frame(height: 120)
+            Spacer(minLength: Spacing.l)
 
-            VStack(spacing: Spacing.s) {
+            recordingSurface
+
+            Spacer(minLength: Spacing.l)
+
+            HStack(spacing: Spacing.l) {
+                Button {
+                    phase = .idle
+                } label: {
+                    Label("Retake", systemImage: "arrow.counterclockwise")
+                        .font(.headline)
+                        .padding(.vertical, Spacing.s)
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.large)
+                .tint(.primary)
+
                 Button {
                     phase = .enhancing(rVM)
                     Task {
@@ -133,23 +144,33 @@ struct RecordView: View {
                         phase = .studio(rVM)
                     }
                 } label: {
-                    Label("Enhance Audio", systemImage: "wand.and.stars")
+                    Label("Enhance", systemImage: "wand.and.stars")
                         .font(.headline)
+                        .padding(.vertical, Spacing.s)
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.borderedProminent)
                 .controlSize(.large)
-
-                Button("Discard") {
-                    phase = .idle
-                }
-                .font(.body)
-                .foregroundStyle(.secondary)
             }
-            Spacer()
+            .padding(.horizontal, Spacing.l)
+
+            notice
+            
+            Spacer(minLength: Spacing.xl)
         }
-        .padding(.horizontal, Spacing.l)
-        .navigationTitle("Review")
+        .navigationTitle("Record")
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                HStack(spacing: Spacing.m) {
+                    Button { showImporter = true } label: {
+                        Image(systemName: "square.and.arrow.down")
+                    }
+                    NavigationLink(value: AppRoute.library) {
+                        Image(systemName: "list.bullet")
+                    }
+                }
+            }
+        }
         .task {
             await rVM.onAppear()
         }
