@@ -77,7 +77,7 @@ struct RecordView: View {
     // MARK: - Layouts
 
     private var idleLayout: some View {
-        VStack(spacing: showLyrics ? Spacing.s : Spacing.xl) {
+        VStack(spacing: showLyrics ? Spacing.m : Spacing.xl) {
             Spacer(minLength: showLyrics ? 0 : Spacing.l)
 
             lyricsCard
@@ -85,12 +85,12 @@ struct RecordView: View {
             if !isLyricsFocused {
                 recordingSurface
                 
-                Spacer(minLength: showLyrics ? Spacing.s : Spacing.l)
+                Spacer(minLength: showLyrics ? 4 : Spacing.l)
                 
                 RecordButton(isRecording: false) {
                     viewModel.start()
                 }
-                .scaleEffect(showLyrics ? 0.5 : 1.0)
+                .scaleEffect(showLyrics ? 0.8 : 1.0)
                 .animation(.snappy, value: showLyrics)
                 .transition(.opacity.combined(with: .scale(scale: 0.8)))
             }
@@ -124,7 +124,7 @@ struct RecordView: View {
     }
 
     private var recordingLayout: some View {
-        VStack(spacing: showLyrics ? Spacing.s : Spacing.xl) {
+        VStack(spacing: showLyrics ? Spacing.m : Spacing.xl) {
             Spacer(minLength: showLyrics ? 0 : Spacing.l)
 
             lyricsCard
@@ -132,12 +132,12 @@ struct RecordView: View {
             if !isLyricsFocused {
                 recordingSurface
                 
-                Spacer(minLength: showLyrics ? Spacing.s : Spacing.l)
+                Spacer(minLength: showLyrics ? 4 : Spacing.l)
                 
                 RecordButton(isRecording: true, rms: viewModel.rms) {
                     viewModel.stop()
                 }
-                .scaleEffect(showLyrics ? 0.5 : 1.0)
+                .scaleEffect(showLyrics ? 0.8 : 1.0)
                 .animation(.snappy, value: showLyrics)
                 .transition(.opacity.combined(with: .scale(scale: 0.8)))
             }
@@ -402,20 +402,23 @@ struct RecordView: View {
     private var lyricsCard: some View {
         Group {
             if showLyrics {
-                VStack(spacing: 0) {
+                VStack(spacing: Spacing.s) {
                     if !richTextContext.isEmpty {
-                        HStack {
+                        HStack(spacing: Spacing.l) {
                             Button { richTextContext.changeFontSize(increase: false) } label: { Image(systemName: "textformat.size.smaller") }
                             Button { richTextContext.changeFontSize(increase: true) } label: { Image(systemName: "textformat.size.larger") }
-                            Spacer()
                             Button { richTextContext.toggleBold() } label: { Image(systemName: "bold") }
                             ColorPicker("", selection: Binding(get: { .black }, set: { c in richTextContext.changeColor(UIColor(c)) })).labelsHidden()
                         }
-                        .padding(.horizontal, Spacing.m)
+                        .padding(.horizontal, Spacing.l)
                         .padding(.vertical, Spacing.s)
-                        .background(Color(.secondarySystemBackground))
-                        .clipShape(RoundedRectangle(cornerRadius: 16))
-                        .padding(Spacing.s)
+                        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                .stroke(Color.white.opacity(0.3), lineWidth: 1)
+                                .blendMode(.overlay)
+                        )
+                        .shadow(color: Color.black.opacity(0.05), radius: 5, x: 0, y: 2)
                         .transition(.opacity.combined(with: .move(edge: .top)))
                     }
                     
@@ -431,15 +434,15 @@ struct RecordView: View {
                         RichTextEditor(rtfData: $lyricsData, isFocused: $isLyricsFocused, context: richTextContext)
                             .padding(.horizontal, Spacing.s)
                     }
+                    .frame(maxHeight: .infinity)
+                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 24, style: .continuous)
+                            .stroke(Color.white.opacity(0.3), lineWidth: 1)
+                            .blendMode(.overlay)
+                    )
+                    .shadow(color: Color.black.opacity(0.05), radius: 10, x: 0, y: 5)
                 }
-                .frame(maxHeight: .infinity)
-                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 24, style: .continuous)
-                        .stroke(Color.white.opacity(0.3), lineWidth: 1)
-                        .blendMode(.overlay)
-                )
-                .shadow(color: Color.black.opacity(0.05), radius: 10, x: 0, y: 5)
                 .padding(.horizontal, Spacing.m)
                 .transition(.move(edge: .top).combined(with: .opacity).combined(with: .scale(scale: 0.95)))
                 .layoutPriority(1)
