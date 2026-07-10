@@ -89,14 +89,9 @@ struct RecordView: View {
                 .transition(.opacity.combined(with: .scale(scale: 0.8)))
             }
             
-            if !showLyrics {
-                notice
-            }
-            
             Spacer(minLength: showLyrics ? Spacing.s : Spacing.xl)
         }
         .animation(.snappy, value: isLyricsFocused)
-        .navigationTitle("Record")
         .toolbar {
             ToolbarItemGroup(placement: .topBarTrailing) {
                 Button { 
@@ -139,14 +134,9 @@ struct RecordView: View {
                 .transition(.opacity.combined(with: .scale(scale: 0.8)))
             }
             
-            if !showLyrics {
-                notice
-            }
-            
             Spacer(minLength: showLyrics ? Spacing.s : Spacing.xl)
         }
         .animation(.snappy, value: isLyricsFocused)
-        .navigationTitle("Listening...")
     }
 
     private func recordedLayout(_ rVM: ResultViewModel) -> some View {
@@ -212,14 +202,9 @@ struct RecordView: View {
                 .transition(.opacity.combined(with: .scale(scale: 0.8)))
             }
             
-            if !showLyrics {
-                notice
-            }
-            
             Spacer(minLength: showLyrics ? Spacing.s : Spacing.xl)
         }
         .animation(.snappy, value: isLyricsFocused)
-        .navigationTitle("Record")
         .toolbar {
             ToolbarItemGroup(placement: .topBarTrailing) {
                 Button { 
@@ -486,7 +471,7 @@ struct RecordView: View {
                         .transition(.scale.combined(with: .opacity))
                     }
                 }
-                .padding(.horizontal, Spacing.m)
+                .padding(.horizontal, Spacing.xs)
                 .transition(.move(edge: .top).combined(with: .opacity).combined(with: .scale(scale: 0.95)))
                 .layoutPriority(1)
             }
