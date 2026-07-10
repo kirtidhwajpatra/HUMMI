@@ -77,7 +77,7 @@ struct RecordView: View {
     // MARK: - Layouts
 
     private var idleLayout: some View {
-        VStack(spacing: showLyrics ? Spacing.m : Spacing.xl) {
+        VStack(spacing: Spacing.xl) {
             Spacer(minLength: showLyrics ? 0 : Spacing.l)
 
             lyricsCard
@@ -85,7 +85,7 @@ struct RecordView: View {
             if !isLyricsFocused {
                 recordingSurface
                 
-                Spacer(minLength: showLyrics ? 4 : Spacing.l)
+                Spacer(minLength: 0)
                 
                 RecordButton(isRecording: false) {
                     viewModel.start()
@@ -111,7 +111,7 @@ struct RecordView: View {
                         isLyricsFocused = showLyrics
                     }
                 } label: {
-                    Image(systemName: showLyrics ? "text.quote.fill" : "text.quote")
+                    Image(systemName: showLyrics ? "doc.text.fill" : "doc.text")
                 }
                 Button { showImporter = true } label: {
                     Image(systemName: "square.and.arrow.down")
@@ -124,7 +124,7 @@ struct RecordView: View {
     }
 
     private var recordingLayout: some View {
-        VStack(spacing: showLyrics ? Spacing.m : Spacing.xl) {
+        VStack(spacing: Spacing.xl) {
             Spacer(minLength: showLyrics ? 0 : Spacing.l)
 
             lyricsCard
@@ -132,7 +132,7 @@ struct RecordView: View {
             if !isLyricsFocused {
                 recordingSurface
                 
-                Spacer(minLength: showLyrics ? 4 : Spacing.l)
+                Spacer(minLength: 0)
                 
                 RecordButton(isRecording: true, rms: viewModel.rms) {
                     viewModel.stop()
@@ -402,26 +402,7 @@ struct RecordView: View {
     private var lyricsCard: some View {
         Group {
             if showLyrics {
-                VStack(spacing: Spacing.s) {
-                    if !richTextContext.isEmpty {
-                        HStack(spacing: Spacing.l) {
-                            Button { richTextContext.changeFontSize(increase: false) } label: { Image(systemName: "textformat.size.smaller") }
-                            Button { richTextContext.changeFontSize(increase: true) } label: { Image(systemName: "textformat.size.larger") }
-                            Button { richTextContext.toggleBold() } label: { Image(systemName: "bold") }
-                            ColorPicker("", selection: Binding(get: { .black }, set: { c in richTextContext.changeColor(UIColor(c)) })).labelsHidden()
-                        }
-                        .padding(.horizontal, Spacing.l)
-                        .padding(.vertical, Spacing.s)
-                        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                .stroke(Color.white.opacity(0.3), lineWidth: 1)
-                                .blendMode(.overlay)
-                        )
-                        .shadow(color: Color.black.opacity(0.05), radius: 5, x: 0, y: 2)
-                        .transition(.opacity.combined(with: .move(edge: .top)))
-                    }
-                    
+                ZStack(alignment: .topTrailing) {
                     ZStack(alignment: .topLeading) {
                         if richTextContext.isEmpty {
                             Text("Paste your recording script")
@@ -442,6 +423,18 @@ struct RecordView: View {
                             .blendMode(.overlay)
                     )
                     .shadow(color: Color.black.opacity(0.05), radius: 10, x: 0, y: 5)
+                    
+                    if !richTextContext.isEmpty {
+                        HStack(spacing: Spacing.m) {
+                            Button { richTextContext.changeFontSize(increase: false) } label: { Image(systemName: "textformat.size.smaller") }
+                            Button { richTextContext.changeFontSize(increase: true) } label: { Image(systemName: "textformat.size.larger") }
+                            Button { richTextContext.toggleBold() } label: { Image(systemName: "bold") }
+                            ColorPicker("", selection: Binding(get: { .black }, set: { c in richTextContext.changeColor(UIColor(c)) })).labelsHidden()
+                        }
+                        .padding(.trailing, Spacing.l)
+                        .padding(.top, Spacing.s)
+                        .transition(.opacity)
+                    }
                 }
                 .padding(.horizontal, Spacing.m)
                 .transition(.move(edge: .top).combined(with: .opacity).combined(with: .scale(scale: 0.95)))
