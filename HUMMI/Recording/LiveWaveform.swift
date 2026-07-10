@@ -33,9 +33,10 @@ struct LiveWaveform: View {
     private func advance() {
         phase += 0.12
         if isRecording {
-            // Voice-reactive: scroll newest-on-the-right; floor keeps the
-            // line from fully collapsing between words.
-            let next = Float(min(0.14 + level * 1.9, 1.0))
+            // Voice-reactive: scale the linear RMS logarithmically/non-linearly
+            // so small volume changes create visible, organic waveform peaks.
+            let emphasized = sqrt(level) * 2.0
+            let next = Float(min(0.14 + emphasized, 1.0))
             var updated = samples
             if updated.count >= Self.barCount { updated.removeFirst() }
             updated.append(next)
