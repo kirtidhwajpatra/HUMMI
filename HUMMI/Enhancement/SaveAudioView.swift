@@ -18,19 +18,32 @@ struct SaveAudioView: View {
         VStack(spacing: 0) {
             Spacer(minLength: Spacing.xl)
 
-            nameField
-                .padding(.horizontal, Spacing.l)
-
-            Spacer(minLength: Spacing.xxl)
-
-            WaveformView(peaks: viewModel.peaks, tint: .accentColor, style: .bars)
-                .frame(height: 100)
+            VStack(spacing: Spacing.xl) {
+                nameField
+                    .padding(.top, Spacing.xl)
+                    .padding(.horizontal, Spacing.l)
+                
+                VStack(spacing: Spacing.m) {
+                    HStack(spacing: Spacing.xs) {
+                        Image(systemName: "wand.and.stars")
+                        Text("Enhanced Studio Audio")
+                    }
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Color.accentColor)
+                    
+                    WaveformView(peaks: viewModel.peaks, tint: .accentColor, style: .line)
+                        .frame(height: 120)
+                }
                 .padding(.horizontal, Spacing.m)
 
-            Text(durationText)
-                .font(.title2.monospacedDigit())
-                .foregroundStyle(.secondary)
-                .padding(.top, Spacing.xxl)
+                Text(durationText)
+                    .font(.callout.monospacedDigit())
+                    .foregroundStyle(.secondary)
+                    .padding(.bottom, Spacing.xl)
+            }
+            .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 32, style: .continuous))
+            .shadow(color: Color.black.opacity(0.05), radius: 20, x: 0, y: 10)
+            .padding(.horizontal, Spacing.m)
 
             Spacer(minLength: Spacing.xl)
 
@@ -45,9 +58,7 @@ struct SaveAudioView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
-                Button {
-                    onOpenPlaylist()
-                } label: {
+                NavigationLink(value: AppRoute.library) {
                     HStack(spacing: Spacing.xxs) {
                         Image(systemName: "list.bullet")
                         Text("Playlist")
