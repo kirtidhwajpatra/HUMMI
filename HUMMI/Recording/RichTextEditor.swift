@@ -109,15 +109,22 @@ struct RichTextEditor: UIViewRepresentable {
     
     class Coordinator: NSObject, UITextViewDelegate {
         var parent: RichTextEditor
+        var saveWorkItem: DispatchWorkItem?
         
         init(_ parent: RichTextEditor) {
             self.parent = parent
         }
         
         func textViewDidChange(_ textView: UITextView) {
-            if let data = try? textView.attributedText.data(from: NSRange(location: 0, length: textView.attributedText.length), documentAttributes: [.documentType: NSAttributedString.DocumentType.rtf]) {
-                parent.rtfData = data
+            saveWorkItem?.cancel()
+            let workItem = DispatchWorkItem { [weak self, weak textView] in
+                guard let self = self, let tv = textView else { return }
+                if let data = try? tv.attributedText.data(from: NSRange(location: 0, length: tv.attributedText.length), documentAttributes: [.documentType: NSAttributedString.DocumentType.rtf]) {
+                    self.parent.rtfData = data
+                }
             }
+            saveWorkItem = workItem
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0, execute: workItem)
         }
         
         func textViewDidBeginEditing(_ textView: UITextView) {
@@ -129,6 +136,10 @@ struct RichTextEditor: UIViewRepresentable {
         func textViewDidEndEditing(_ textView: UITextView) {
             if parent.isFocused.wrappedValue {
                 parent.isFocused.wrappedValue = false
+            }
+            saveWorkItem?.cancel()
+            if let data = try? textView.attributedText.data(from: NSRange(location: 0, length: textView.attributedText.length), documentAttributes: [.documentType: NSAttributedString.DocumentType.rtf]) {
+                parent.rtfData = data
             }
         }
         
