@@ -77,7 +77,7 @@ struct RecordView: View {
             if !isLyricsFocused {
                 Spacer(minLength: showLyrics ? Spacing.xl : 0)
                 
-                recordingSurface
+                recordingSurface()
                 
                 Spacer(minLength: 0)
                 
@@ -127,7 +127,7 @@ struct RecordView: View {
             if !isLyricsFocused {
                 Spacer(minLength: showLyrics ? Spacing.xl : 0)
                 
-                recordingSurface
+                recordingSurface()
                 
                 Spacer(minLength: 0)
                 
@@ -151,65 +151,86 @@ struct RecordView: View {
 
     private func recordedLayout(_ rVM: ResultViewModel) -> some View {
         VStack(spacing: Spacing.xl) {
-            Spacer(minLength: Spacing.l)
+            Spacer(minLength: showLyrics ? 0 : Spacing.l)
 
-            recordingSurface
+            lyricsCard
 
-            Spacer(minLength: Spacing.l)
-
-            VStack(spacing: Spacing.s) {
-                Button {
-                    Task {
-                        await rVM.enhanceWithStudio()
-                        phase = .studio(rVM)
-                    }
-                } label: {
-                    if case .enhancing(let frac) = rVM.phase {
-                        HStack(spacing: Spacing.s) {
-                            ProgressView()
-                                .tint(.white)
-                            if let f = frac {
-                                Text("Enhancing \(Int(f * 100))%")
-                            } else {
-                                Text("Enhancing...")
-                            }
-                        }
-                        .font(.headline)
-                        .lineLimit(1)
-                        .frame(maxWidth: .infinity)
-                    } else {
-                        Label("Enhance", systemImage: "wand.and.stars")
-                            .font(.headline)
-                            .lineLimit(1)
-                            .frame(maxWidth: .infinity)
-                    }
-                }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.large)
-                .disabled(rVM.phase != .idle)
+            if !isLyricsFocused {
+                Spacer(minLength: showLyrics ? Spacing.xl : 0)
                 
-                Button {
-                    phase = .idle
-                } label: {
-                    Label("Retake", systemImage: "arrow.counterclockwise")
-                        .font(.headline)
-                        .lineLimit(1)
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(.bordered)
-                .controlSize(.large)
-                .tint(.primary)
-                .disabled(rVM.phase != .idle)
-            }
-            .padding(.horizontal, Spacing.l)
+                recordingSurface(rVM: rVM)
+                
+                Spacer(minLength: 0)
+                
+                HStack(spacing: Spacing.xl) {
+                    // Play Button
+                    Button {
+                        rVM.abPlayer.togglePlayPause()
+                    } label: {
+                        Image(systemName: rVM.abPlayer.isPlaying ? "pause.fill" : "play.fill")
+                            .font(.system(size: 24, weight: .bold))
+                            .foregroundStyle(.white)
+                            .frame(width: 56, height: 56)
+                            .background(Color.primary, in: Circle())
+                    }
+                    
+                    // Enhance Button
+                    Button {
+                        Task {
+                            await rVM.enhanceWithStudio()
+                            phase = .studio(rVM)
+                        }
+                    } label: {
+                        if case .enhancing = rVM.phase {
+                            ProgressView().tint(.white)
+                                .frame(width: 64, height: 64)
+                                .background(Color.accentColor, in: Circle())
+                        } else {
+                            Image(systemName: "wand.and.stars")
+                                .font(.system(size: 28, weight: .bold))
+                                .foregroundStyle(.white)
+                                .frame(width: 64, height: 64)
+                                .background(Color.accentColor, in: Circle())
+                        }
+                    }
+                    .disabled(rVM.phase != .idle)
 
-            notice
+                    // Retake Button
+                    Button {
+                        phase = .idle
+                    } label: {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 24, weight: .bold))
+                            .foregroundStyle(.white)
+                            .frame(width: 56, height: 56)
+                            .background(Color.secondary, in: Circle())
+                    }
+                    .disabled(rVM.phase != .idle)
+                }
+                .scaleEffect(showLyrics ? 0.8 : 1.0)
+                .animation(.snappy, value: showLyrics)
+                .transition(.opacity.combined(with: .scale(scale: 0.8)))
+            }
             
-            Spacer(minLength: Spacing.xl)
+            if !showLyrics {
+                notice
+            }
+            
+            Spacer(minLength: showLyrics ? Spacing.s : Spacing.xl)
         }
+        .animation(.snappy, value: isLyricsFocused)
         .navigationTitle("Record")
         .toolbar {
             ToolbarItemGroup(placement: .topBarTrailing) {
+                Button { 
+                    withAnimation(.snappy) {
+                        showLyrics.toggle()
+                        isLyricsFocused = showLyrics
+                    }
+                } label: {
+                    Image(systemName: "text.quote")
+                        .foregroundStyle(showLyrics ? Color.red : Color.primary)
+                }
                 Button { showImporter = true } label: {
                     Image(systemName: "square.and.arrow.down")
                 }
@@ -357,21 +378,37 @@ struct RecordView: View {
 
 
 
-    private var recordingSurface: some View {
-        VStack(spacing: showLyrics ? 4 : Spacing.xl) {
-            Text(elapsedText)
+    private func recordingSurface(rVM: ResultViewModel? = nil) -> some View {
+        let isPlayback = rVM != nil
+        let timeText = isPlayback ? timeString(rVM!.abPlayer.currentTime) : elapsedText
+        
+        return VStack(spacing: showLyrics ? 4 : Spacing.xl) {
+            Text(timeText)
                 .font(.system(size: showLyrics ? 24 : 64, weight: .semibold, design: .rounded).monospacedDigit())
-                .foregroundStyle(isRecording ? Color.primary : Color(.tertiaryLabel))
+                .foregroundStyle((isPlayback || isRecording) ? Color.primary : Color(.tertiaryLabel))
                 .contentTransition(.numericText())
                 .accessibilityLabel(isRecording ? "Recording time" : "Ready")
-                .accessibilityValue(elapsedText)
+                .accessibilityValue(timeText)
 
-            LiveWaveform(
-                level: CGFloat(viewModel.rms),
-                isRecording: isRecording,
-                tint: isRecording ? .accentColor : Color(.systemGray3))
+            if let rVM {
+                GeometryReader { geometry in
+                    WaveformView(
+                        peaks: rVM.peaks,
+                        progress: rVM.abPlayer.isPlaying ? nil : (rVM.abPlayer.duration > 0 ? rVM.abPlayer.currentTime / rVM.abPlayer.duration : 0),
+                        live: rVM.abPlayer.isPlaying ? { rVM.abPlayer.duration > 0 ? rVM.abPlayer.currentTime / rVM.abPlayer.duration : 0 } : nil,
+                        style: .bars,
+                        playedTint: .primary
+                    )
+                }
                 .frame(height: showLyrics ? 24 : 84)
-                .waveformTransitionSource(in: namespace)
+            } else {
+                LiveWaveform(
+                    level: CGFloat(viewModel.rms),
+                    isRecording: isRecording,
+                    tint: isRecording ? .accentColor : Color(.systemGray3))
+                    .frame(height: showLyrics ? 24 : 84)
+                    .waveformTransitionSource(in: namespace)
+            }
         }
         .padding(.vertical, showLyrics ? 8 : Spacing.xl)
         .padding(.horizontal, Spacing.l)
