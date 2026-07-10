@@ -30,6 +30,8 @@ enum HomePhase: Equatable {
 }
 
 struct ContentView: View {
+    @AppStorage("appTheme") private var appTheme: AppTheme = .system
+    
     @State private var audioSession = AudioSessionManager()
     @State private var recording = RecordingViewModel()
     @State private var selectedTab = 0
@@ -81,26 +83,14 @@ struct ContentView: View {
             .tag(1)
             
             NavigationStack {
-                VStack {
-                    Image(systemName: "gearshape")
-                        .font(.system(size: 64))
-                        .foregroundStyle(.secondary)
-                        .padding(.bottom)
-                    Text("Settings coming soon")
-                        .font(.headline)
-                    Text("Configure your audio inputs, default export format, and app theme.")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal)
-                }
-                .navigationTitle("Settings")
+                SettingsView()
             }
             .tabItem {
                 Label("Settings", systemImage: "gearshape.fill")
             }
             .tag(2)
         }
+        .preferredColorScheme(appTheme.colorScheme)
     }
 
     private var sessionContent: some View {

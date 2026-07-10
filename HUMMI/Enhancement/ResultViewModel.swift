@@ -211,9 +211,19 @@ final class ResultViewModel {
         isExporting = true
         defer { isExporting = false }
         do {
-            let output = exportURL(extension: "m4a")
-            try await AudioExporter.exportM4A(from: source, to: output)
-            shareItem = ShareItem(url: output)
+            let formatRaw = UserDefaults.standard.string(forKey: "exportFormat") ?? ExportFormat.m4a.rawValue
+            if formatRaw == ExportFormat.wav.rawValue {
+                let output = exportURL(extension: "wav")
+                if FileManager.default.fileExists(atPath: output.path) {
+                    try FileManager.default.removeItem(at: output)
+                }
+                try FileManager.default.copyItem(at: source, to: output)
+                shareItem = ShareItem(url: output)
+            } else {
+                let output = exportURL(extension: "m4a")
+                try await AudioExporter.exportM4A(from: source, to: output)
+                shareItem = ShareItem(url: output)
+            }
         } catch {
             errorMessage = error.localizedDescription
         }
