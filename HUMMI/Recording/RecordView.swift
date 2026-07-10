@@ -281,16 +281,7 @@ struct RecordView: View {
                                 }
                                 .frame(width: 88, height: 88)
                                 .foregroundStyle(isSelected ? Color.white : Color.primary)
-                                .background(
-                                    isSelected
-                                        ? AnyShapeStyle(LinearGradient(colors: toneColors(preset), startPoint: .topLeading, endPoint: .bottomTrailing))
-                                        : AnyShapeStyle(Color(.secondarySystemGroupedBackground)),
-                                    in: RoundedRectangle(cornerRadius: 20, style: .continuous)
-                                )
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 20, style: .continuous)
-                                        .stroke(isSelected ? Color.clear : Color(.separator), lineWidth: 0.5)
-                                )
+                                .background(ToneFilterCardBackground(preset: preset, isSelected: isSelected))
                             }
                             .buttonStyle(.plain)
                             .disabled(rVM.isRendering)
@@ -378,20 +369,7 @@ struct RecordView: View {
         timeString(viewModel.elapsed)
     }
 
-    private func toneColors(_ preset: StudioPreset) -> [Color] {
-        func c(_ r: Double, _ g: Double, _ b: Double) -> Color { Color(red: r, green: g, blue: b) }
-        switch preset {
-        case .balanced: return [c(0.22, 0.62, 0.55), c(0.12, 0.42, 0.42)]
-        case .studio:   return [c(0.93, 0.32, 0.26), c(0.78, 0.16, 0.16)]
-        case .warm:     return [c(0.96, 0.52, 0.22), c(0.88, 0.30, 0.20)]
-        case .bright:   return [c(0.90, 0.66, 0.18), c(0.80, 0.45, 0.12)]
-        case .vintage:  return [c(0.62, 0.46, 0.30), c(0.42, 0.30, 0.20)]
-        case .radio:    return [c(0.26, 0.56, 0.92), c(0.14, 0.38, 0.74)]
-        case .deep:     return [c(0.38, 0.36, 0.72), c(0.20, 0.20, 0.50)]
-        case .airy:     return [c(0.32, 0.72, 0.86), c(0.20, 0.54, 0.72)]
-        case .concert:  return [c(0.62, 0.32, 0.82), c(0.44, 0.20, 0.66)]
-        }
-    }
+
 
     #if DEBUG
     private func autorunIfRequested() async {
@@ -450,5 +428,54 @@ struct ToneTunerSheet: View {
             Slider(value: value, in: range).tint(.accentColor)
         }
         .padding(.vertical, Spacing.xxs)
+    }
+}
+
+struct ToneFilterCardBackground: View {
+    let preset: StudioPreset
+    let isSelected: Bool
+
+    var baseColors: (Color, Color, Color, Color) {
+        func c(_ r: Double, _ g: Double, _ b: Double) -> Color { Color(red: r, green: g, blue: b) }
+        switch preset {
+        case .balanced: return (c(0.22, 0.62, 0.55), c(0.12, 0.82, 0.42), c(0.0, 0.3, 0.6), c(0.1, 0.2, 0.1))
+        case .studio:   return (c(0.93, 0.32, 0.26), c(1.0, 0.6, 0.2), c(0.8, 0.1, 0.5), c(0.2, 0.0, 0.0))
+        case .warm:     return (c(0.96, 0.52, 0.22), c(1.0, 0.8, 0.2), c(0.9, 0.2, 0.1), c(1.0, 1.0, 1.0))
+        case .bright:   return (c(0.90, 0.66, 0.18), c(1.0, 0.9, 0.4), c(1.0, 0.5, 0.1), c(1.0, 1.0, 0.8))
+        case .vintage:  return (c(0.62, 0.46, 0.30), c(0.8, 0.6, 0.4), c(0.3, 0.2, 0.1), c(0.9, 0.8, 0.6))
+        case .radio:    return (c(0.26, 0.56, 0.92), c(0.4, 0.8, 1.0), c(0.6, 0.2, 0.9), c(0.0, 0.1, 0.3))
+        case .deep:     return (c(0.38, 0.36, 0.72), c(0.6, 0.2, 0.8), c(0.1, 0.1, 0.4), c(0.2, 0.4, 0.8))
+        case .airy:     return (c(0.32, 0.72, 0.86), c(0.6, 0.9, 1.0), c(1.0, 1.0, 1.0), c(0.2, 0.8, 0.6))
+        case .concert:  return (c(0.62, 0.32, 0.82), c(0.9, 0.4, 0.8), c(0.3, 0.1, 0.6), c(0.1, 0.0, 0.2))
+        }
+    }
+
+    var body: some View {
+        let (c1, c2, c3, c4) = baseColors
+        ZStack {
+            if isSelected {
+                c1
+                Circle().fill(c2).frame(width: 100).offset(x: -30, y: -30).blur(radius: 20)
+                Circle().fill(c3).frame(width: 100).offset(x: 30, y: 30).blur(radius: 20)
+                Circle().fill(c4).frame(width: 80).offset(x: -30, y: 30).blur(radius: 15).opacity(0.8)
+            } else {
+                Color(.secondarySystemGroupedBackground)
+                Circle().fill(c1.opacity(0.15)).frame(width: 80).offset(x: -20, y: -20).blur(radius: 20)
+                Circle().fill(c2.opacity(0.1)).frame(width: 80).offset(x: 20, y: 20).blur(radius: 20)
+            }
+        }
+        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .stroke(isSelected ? Color.white.opacity(0.5) : Color(.separator), lineWidth: 0.5)
+                .blendMode(isSelected ? .overlay : .normal)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .stroke(Color.white.opacity(0.3), lineWidth: 1)
+                .padding(1)
+                .blur(radius: 1)
+                .opacity(isSelected ? 1 : 0)
+        )
     }
 }
