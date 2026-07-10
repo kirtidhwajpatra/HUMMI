@@ -437,7 +437,7 @@ struct RecordView: View {
         Group {
             if showLyrics {
                 VStack(spacing: Spacing.s) {
-                    if !richTextContext.isEmpty {
+                    if isLyricsFocused {
                         HStack(spacing: Spacing.m) {
                             Spacer()
                             Button { richTextContext.changeFontSize(increase: false) } label: { Image(systemName: "textformat.size.smaller") }
@@ -449,30 +449,31 @@ struct RecordView: View {
                         .transition(.opacity)
                     }
                     
-                    ZStack(alignment: .bottomTrailing) {
-                        ZStack(alignment: .topLeading) {
-                            if richTextContext.isEmpty {
-                                Text("Paste your recording script")
-                                    .font(.system(size: 18))
-                                    .foregroundStyle(Color(.tertiaryLabel))
-                                    .padding(.horizontal, Spacing.s + 5)
-                                    .padding(.top, 8)
-                                    .allowsHitTesting(false)
-                            }
-                            RichTextEditor(rtfData: $lyricsData, isFocused: $isLyricsFocused, context: richTextContext)
-                                .padding(.horizontal, Spacing.s)
+                    ZStack(alignment: .topLeading) {
+                        if richTextContext.isEmpty {
+                            Text("Paste your recording script")
+                                .font(.system(size: 18))
+                                .foregroundStyle(Color(.tertiaryLabel))
+                                .padding(.horizontal, Spacing.s + 5)
                                 .padding(.top, 8)
+                                .allowsHitTesting(false)
                         }
-                        .frame(maxHeight: .infinity)
-                        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 24, style: .continuous)
-                                .stroke(Color.white.opacity(0.3), lineWidth: 1)
-                                .blendMode(.overlay)
-                        )
-                        .shadow(color: Color.black.opacity(0.05), radius: 10, x: 0, y: 5)
-                        
-                        if isLyricsFocused {
+                        RichTextEditor(rtfData: $lyricsData, isFocused: $isLyricsFocused, context: richTextContext)
+                            .padding(.horizontal, Spacing.s)
+                            .padding(.top, 8)
+                    }
+                    .frame(maxHeight: .infinity)
+                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 24, style: .continuous)
+                            .stroke(Color.white.opacity(0.3), lineWidth: 1)
+                            .blendMode(.overlay)
+                    )
+                    .shadow(color: Color.black.opacity(0.05), radius: 10, x: 0, y: 5)
+                    
+                    if isLyricsFocused {
+                        HStack {
+                            Spacer()
                             Button("Done") {
                                 isLyricsFocused = false
                             }
@@ -481,9 +482,8 @@ struct RecordView: View {
                             .padding(.horizontal, 20)
                             .padding(.vertical, 10)
                             .background(Color.red, in: Capsule())
-                            .padding(Spacing.m)
-                            .transition(.scale.combined(with: .opacity))
                         }
+                        .transition(.scale.combined(with: .opacity))
                     }
                 }
                 .padding(.horizontal, Spacing.m)
