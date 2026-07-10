@@ -101,12 +101,6 @@ struct RichTextEditor: UIViewRepresentable {
             textView.attributedText = NSAttributedString(string: "", attributes: [.font: UIFont.systemFont(ofSize: 18), .foregroundColor: UIColor.label])
         }
         
-        let toolbar = UIToolbar(frame: CGRect(x: 0, y: 0, width: UIScreen.main.bounds.width, height: 44))
-        let flex = UIBarButtonItem(barButtonSystemItem: .flexibleSpace, target: nil, action: nil)
-        let doneBtn = UIBarButtonItem(title: "Done", style: .done, target: context.coordinator, action: #selector(Coordinator.doneTapped))
-        toolbar.items = [flex, doneBtn]
-        textView.inputAccessoryView = toolbar
-        
         self.context.textView = textView
         
         return textView

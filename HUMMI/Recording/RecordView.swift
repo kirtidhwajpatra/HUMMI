@@ -75,6 +75,8 @@ struct RecordView: View {
             lyricsCard
 
             if !isLyricsFocused {
+                Spacer(minLength: showLyrics ? Spacing.xl : 0)
+                
                 recordingSurface
                 
                 Spacer(minLength: 0)
@@ -103,7 +105,8 @@ struct RecordView: View {
                         isLyricsFocused = showLyrics
                     }
                 } label: {
-                    Image(systemName: showLyrics ? "text.quote.fill" : "text.quote")
+                    Image(systemName: "text.quote")
+                        .foregroundStyle(showLyrics ? Color.red : Color.primary)
                 }
                 Button { showImporter = true } label: {
                     Image(systemName: "square.and.arrow.down")
@@ -122,6 +125,8 @@ struct RecordView: View {
             lyricsCard
 
             if !isLyricsFocused {
+                Spacer(minLength: showLyrics ? Spacing.xl : 0)
+                
                 recordingSurface
                 
                 Spacer(minLength: 0)
@@ -407,27 +412,42 @@ struct RecordView: View {
                         .transition(.opacity)
                     }
                     
-                    ZStack(alignment: .topLeading) {
-                        if richTextContext.isEmpty {
-                            Text("Paste your recording script")
-                                .font(.system(size: 18))
-                                .foregroundStyle(Color(.tertiaryLabel))
-                                .padding(.horizontal, Spacing.s + 5)
-                                .padding(.top, 12)
-                                .allowsHitTesting(false)
+                    ZStack(alignment: .bottomTrailing) {
+                        ZStack(alignment: .topLeading) {
+                            if richTextContext.isEmpty {
+                                Text("Paste your recording script")
+                                    .font(.system(size: 18))
+                                    .foregroundStyle(Color(.tertiaryLabel))
+                                    .padding(.horizontal, Spacing.s + 5)
+                                    .padding(.top, 8)
+                                    .allowsHitTesting(false)
+                            }
+                            RichTextEditor(rtfData: $lyricsData, isFocused: $isLyricsFocused, context: richTextContext)
+                                .padding(.horizontal, Spacing.s)
+                                .padding(.top, 8)
                         }
-                        RichTextEditor(rtfData: $lyricsData, isFocused: $isLyricsFocused, context: richTextContext)
-                            .padding(.horizontal, Spacing.s)
-                            .padding(.top, 4)
+                        .frame(maxHeight: .infinity)
+                        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                                .stroke(Color.white.opacity(0.3), lineWidth: 1)
+                                .blendMode(.overlay)
+                        )
+                        .shadow(color: Color.black.opacity(0.05), radius: 10, x: 0, y: 5)
+                        
+                        if isLyricsFocused {
+                            Button("Done") {
+                                isLyricsFocused = false
+                            }
+                            .font(.headline)
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 20)
+                            .padding(.vertical, 10)
+                            .background(Color.red, in: Capsule())
+                            .padding(Spacing.m)
+                            .transition(.scale.combined(with: .opacity))
+                        }
                     }
-                    .frame(maxHeight: .infinity)
-                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 24, style: .continuous)
-                            .stroke(Color.white.opacity(0.3), lineWidth: 1)
-                            .blendMode(.overlay)
-                    )
-                    .shadow(color: Color.black.opacity(0.05), radius: 10, x: 0, y: 5)
                 }
                 .padding(.horizontal, Spacing.m)
                 .transition(.move(edge: .top).combined(with: .opacity).combined(with: .scale(scale: 0.95)))
