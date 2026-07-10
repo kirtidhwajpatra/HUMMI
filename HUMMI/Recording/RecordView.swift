@@ -86,11 +86,11 @@ struct RecordView: View {
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 HStack(spacing: Spacing.m) {
-                    NavigationLink(value: AppRoute.library) {
-                        Image(systemName: "list.bullet")
-                    }
                     Button { showImporter = true } label: {
                         Image(systemName: "square.and.arrow.down")
+                    }
+                    NavigationLink(value: AppRoute.library) {
+                        Image(systemName: "list.bullet")
                     }
                 }
             }
