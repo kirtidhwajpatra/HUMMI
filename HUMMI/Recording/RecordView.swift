@@ -85,13 +85,13 @@ struct RecordView: View {
         .navigationTitle("Record")
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
-                Button { showImporter = true } label: {
-                    Image(systemName: "square.and.arrow.down")
+                NavigationLink(value: AppRoute.library) {
+                    Image(systemName: "list.bullet")
                 }
             }
             ToolbarItem(placement: .topBarTrailing) {
-                NavigationLink(value: AppRoute.library) {
-                    Image(systemName: "list.bullet")
+                Button { showImporter = true } label: {
+                    Image(systemName: "square.and.arrow.down")
                 }
             }
         }
@@ -330,6 +330,12 @@ struct RecordView: View {
 
     private var recordingSurface: some View {
         VStack(spacing: Spacing.xl) {
+            Image(systemName: isRecording ? "waveform.and.mic" : "mic.fill")
+                .font(.system(size: 48, weight: .light))
+                .foregroundStyle(isRecording ? Color.accentColor : Color(.tertiaryLabel))
+                .symbolEffect(.bounce, value: isRecording)
+                .padding(.top, Spacing.m)
+
             Text(elapsedText)
                 .font(.system(size: 64, weight: .semibold, design: .rounded).monospacedDigit())
                 .foregroundStyle(isRecording ? Color.primary : Color(.tertiaryLabel))
@@ -344,8 +350,11 @@ struct RecordView: View {
                 .frame(height: 84)
                 .waveformTransitionSource(in: namespace)
         }
-        .padding(Spacing.l)
+        .padding(.vertical, Spacing.xl)
+        .padding(.horizontal, Spacing.l)
         .frame(maxWidth: .infinity)
+        .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 32, style: .continuous))
+        .padding(.horizontal, Spacing.m)
         .animation(reduceMotion ? nil : .snappy, value: isRecording)
     }
 
