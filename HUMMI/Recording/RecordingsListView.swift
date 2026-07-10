@@ -31,11 +31,9 @@ struct RecordingsListView: View {
                     }
                     .tint(.red)
                 }
-                .listRowBackground(Color(.secondarySystemGroupedBackground).opacity(0.6))
             }
         }
         .listStyle(.insetGrouped)
-        .scrollContentBackground(.hidden)
         .overlay {
             if viewModel.items.isEmpty, !viewModel.isLoading {
                 EmptyStateView(

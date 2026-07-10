@@ -48,16 +48,7 @@ struct ContentView: View {
     #endif
 
     var body: some View {
-        ZStack {
-            Image("AppBackground")
-                .resizable()
-                .scaledToFill()
-                .ignoresSafeArea()
-            
-            Rectangle()
-                .fill(.ultraThinMaterial)
-                .ignoresSafeArea()
-            
+        ZStack(alignment: .bottom) {
             TabView(selection: $selectedTab) {
                 NavigationStack(path: $homePath) {
                     sessionContent
@@ -68,9 +59,7 @@ struct ContentView: View {
                             }
                         }
                 }
-                .tabItem {
-                    Label("Record", systemImage: "mic.fill")
-                }
+                .toolbar(.hidden, for: .tabBar)
                 .tag(0)
                 
                 NavigationStack(path: $libraryPath) {
@@ -87,21 +76,60 @@ struct ContentView: View {
                         }
                     }
                 }
-                .tabItem {
-                    Label("Library", systemImage: "list.bullet")
-                }
+                .toolbar(.hidden, for: .tabBar)
                 .tag(1)
                 
                 NavigationStack {
                     SettingsView()
                 }
-                .tabItem {
-                    Label("Settings", systemImage: "gearshape.fill")
-                }
+                .toolbar(.hidden, for: .tabBar)
                 .tag(2)
             }
+            
+            customTabBar
         }
         .preferredColorScheme(appTheme.colorScheme)
+    }
+
+    private var customTabBar: some View {
+        HStack(spacing: 0) {
+            Button { selectedTab = 0 } label: {
+                VStack(spacing: 4) {
+                    CustomMicIcon(isActive: selectedTab == 0)
+                    Text("Record")
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundStyle(selectedTab == 0 ? Color.red : Color.gray)
+                }
+                .frame(maxWidth: .infinity)
+            }
+            
+            Button { selectedTab = 1 } label: {
+                VStack(spacing: 4) {
+                    CustomLibraryIcon(isActive: selectedTab == 1)
+                    Text("Library")
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundStyle(selectedTab == 1 ? Color.blue : Color.gray)
+                }
+                .frame(maxWidth: .infinity)
+            }
+            
+            Button { selectedTab = 2 } label: {
+                VStack(spacing: 4) {
+                    CustomSettingsIcon(isActive: selectedTab == 2)
+                    Text("Settings")
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundStyle(selectedTab == 2 ? Color.purple : Color.gray)
+                }
+                .frame(maxWidth: .infinity)
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .background(
+            Color(.systemBackground)
+                .shadow(color: Color.black.opacity(0.05), radius: 10, x: 0, y: -5)
+                .ignoresSafeArea()
+        )
     }
 
     private var sessionContent: some View {
