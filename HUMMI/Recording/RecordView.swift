@@ -84,14 +84,12 @@ struct RecordView: View {
         }
         .navigationTitle("Record")
         .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                HStack(spacing: Spacing.m) {
-                    Button { showImporter = true } label: {
-                        Image(systemName: "square.and.arrow.down")
-                    }
-                    NavigationLink(value: AppRoute.library) {
-                        Image(systemName: "list.bullet")
-                    }
+            ToolbarItemGroup(placement: .topBarTrailing) {
+                Button { showImporter = true } label: {
+                    Image(systemName: "square.and.arrow.down")
+                }
+                NavigationLink(value: AppRoute.library) {
+                    Image(systemName: "list.bullet")
                 }
             }
         }
@@ -130,7 +128,7 @@ struct RecordView: View {
                 } label: {
                     Label("Retake", systemImage: "arrow.counterclockwise")
                         .font(.headline)
-                        .padding(.vertical, Spacing.s)
+                        .lineLimit(1)
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.bordered)
@@ -146,7 +144,7 @@ struct RecordView: View {
                 } label: {
                     Label("Enhance", systemImage: "wand.and.stars")
                         .font(.headline)
-                        .padding(.vertical, Spacing.s)
+                        .lineLimit(1)
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.borderedProminent)
@@ -160,14 +158,12 @@ struct RecordView: View {
         }
         .navigationTitle("Record")
         .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                HStack(spacing: Spacing.m) {
-                    Button { showImporter = true } label: {
-                        Image(systemName: "square.and.arrow.down")
-                    }
-                    NavigationLink(value: AppRoute.library) {
-                        Image(systemName: "list.bullet")
-                    }
+            ToolbarItemGroup(placement: .topBarTrailing) {
+                Button { showImporter = true } label: {
+                    Image(systemName: "square.and.arrow.down")
+                }
+                NavigationLink(value: AppRoute.library) {
+                    Image(systemName: "list.bullet")
                 }
             }
         }
