@@ -48,88 +48,49 @@ struct ContentView: View {
     #endif
 
     var body: some View {
-        ZStack(alignment: .bottom) {
-            TabView(selection: $selectedTab) {
-                NavigationStack(path: $homePath) {
-                    sessionContent
-                        .navigationDestination(for: AppRoute.self) { route in
-                            switch route {
-                            case .save(let url):
-                                SaveAudioView(url: url)
-                            }
-                        }
-                }
-                .toolbar(.hidden, for: .tabBar)
-                .tag(0)
-                
-                NavigationStack(path: $libraryPath) {
-                    RecordingsListView(path: $libraryPath) { selectedURL in
-                        let rVM = ResultViewModel(originalURL: selectedURL)
-                        homePhase = .studio(rVM)
-                        selectedTab = 0
-                        libraryPath.removeAll()
-                    }
+        TabView(selection: $selectedTab) {
+            NavigationStack(path: $homePath) {
+                sessionContent
                     .navigationDestination(for: AppRoute.self) { route in
                         switch route {
                         case .save(let url):
                             SaveAudioView(url: url)
                         }
                     }
-                }
-                .toolbar(.hidden, for: .tabBar)
-                .tag(1)
-                
-                NavigationStack {
-                    SettingsView()
-                }
-                .toolbar(.hidden, for: .tabBar)
-                .tag(2)
             }
+            .tabItem {
+                Label("Record", systemImage: "mic.fill")
+            }
+            .tag(0)
             
-            customTabBar
+            NavigationStack(path: $libraryPath) {
+                RecordingsListView(path: $libraryPath) { selectedURL in
+                    let rVM = ResultViewModel(originalURL: selectedURL)
+                    homePhase = .studio(rVM)
+                    selectedTab = 0
+                    libraryPath.removeAll()
+                }
+                .navigationDestination(for: AppRoute.self) { route in
+                    switch route {
+                    case .save(let url):
+                        SaveAudioView(url: url)
+                    }
+                }
+            }
+            .tabItem {
+                Label("Library", systemImage: "list.bullet")
+            }
+            .tag(1)
+            
+            NavigationStack {
+                SettingsView()
+            }
+            .tabItem {
+                Label("Settings", systemImage: "gearshape.fill")
+            }
+            .tag(2)
         }
         .preferredColorScheme(appTheme.colorScheme)
-    }
-
-    private var customTabBar: some View {
-        HStack(spacing: 0) {
-            Button { selectedTab = 0 } label: {
-                VStack(spacing: 4) {
-                    CustomMicIcon(isActive: selectedTab == 0)
-                    Text("Record")
-                        .font(.system(size: 10, weight: .bold))
-                        .foregroundStyle(selectedTab == 0 ? Color.red : Color.gray)
-                }
-                .frame(maxWidth: .infinity)
-            }
-            
-            Button { selectedTab = 1 } label: {
-                VStack(spacing: 4) {
-                    CustomLibraryIcon(isActive: selectedTab == 1)
-                    Text("Library")
-                        .font(.system(size: 10, weight: .bold))
-                        .foregroundStyle(selectedTab == 1 ? Color.blue : Color.gray)
-                }
-                .frame(maxWidth: .infinity)
-            }
-            
-            Button { selectedTab = 2 } label: {
-                VStack(spacing: 4) {
-                    CustomSettingsIcon(isActive: selectedTab == 2)
-                    Text("Settings")
-                        .font(.system(size: 10, weight: .bold))
-                        .foregroundStyle(selectedTab == 2 ? Color.purple : Color.gray)
-                }
-                .frame(maxWidth: .infinity)
-            }
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
-        .background(
-            Color(.systemBackground)
-                .shadow(color: Color.black.opacity(0.05), radius: 10, x: 0, y: -5)
-                .ignoresSafeArea()
-        )
     }
 
     private var sessionContent: some View {

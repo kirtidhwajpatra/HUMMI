@@ -23,31 +23,66 @@ struct SaveAudioView: View {
         VStack(spacing: 0) {
             Spacer(minLength: Spacing.xl)
 
+            // 1. Premium Name Field above the card
+            nameField
+                .padding(.bottom, Spacing.m)
+                .padding(.horizontal, Spacing.l)
+            
+            // 2. Playable Media Card
             VStack(spacing: Spacing.xl) {
-                nameField
-                    .padding(.top, Spacing.xl)
-                    .padding(.horizontal, Spacing.l)
+                // Badge
+                HStack(spacing: Spacing.xs) {
+                    Image(systemName: "wand.and.stars.inverse")
+                    Text("Enhanced Studio Audio")
+                }
+                .font(.caption.weight(.bold))
+                .foregroundStyle(.white)
+                .padding(.horizontal, Spacing.m)
+                .padding(.vertical, Spacing.s)
+                .background(Color.accentColor, in: Capsule())
+                .padding(.top, Spacing.xl)
                 
+                // Playable Waveform Area
                 VStack(spacing: Spacing.m) {
-                    HStack(spacing: Spacing.xs) {
-                        Image(systemName: "wand.and.stars")
-                        Text("Enhanced Studio Audio")
+                    ZStack {
+                        GeometryReader { geometry in
+                            WaveformView(
+                                peaks: viewModel.peaks,
+                                progress: viewModel.abPlayer.isPlaying ? nil : (viewModel.abPlayer.duration > 0 ? viewModel.abPlayer.currentTime / viewModel.abPlayer.duration : 0),
+                                live: viewModel.abPlayer.isPlaying ? { viewModel.abPlayer.duration > 0 ? viewModel.abPlayer.currentTime / viewModel.abPlayer.duration : 0 } : nil,
+                                style: .bars,
+                                playedTint: .primary
+                            )
+                        }
+                        .frame(height: 80)
                     }
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(Color.accentColor)
-                    
-                    WaveformView(peaks: viewModel.peaks, tint: .accentColor, style: .bars)
-                        .frame(height: 120)
+
+                    // Playback Controls
+                    HStack(spacing: Spacing.xl) {
+                        Text(timeString(viewModel.abPlayer.currentTime))
+                            .font(.callout.monospacedDigit())
+                            .foregroundStyle(.secondary)
+                        
+                        Button {
+                            viewModel.abPlayer.togglePlayPause()
+                        } label: {
+                            Image(systemName: viewModel.abPlayer.isPlaying ? "pause.circle.fill" : "play.circle.fill")
+                                .font(.system(size: 64))
+                                .foregroundStyle(Color.accentColor)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel(viewModel.abPlayer.isPlaying ? "Pause" : "Play")
+                        
+                        Text(timeString(viewModel.duration))
+                            .font(.callout.monospacedDigit())
+                            .foregroundStyle(.secondary)
+                    }
                 }
                 .padding(.horizontal, Spacing.m)
-
-                Text(durationText)
-                    .font(.callout.monospacedDigit())
-                    .foregroundStyle(.secondary)
-                    .padding(.bottom, Spacing.xl)
+                .padding(.bottom, Spacing.xl)
             }
             .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 32, style: .continuous))
-            .shadow(color: Color.black.opacity(0.05), radius: 20, x: 0, y: 10)
+            .shadow(color: Color.black.opacity(0.08), radius: 30, x: 0, y: 15)
             .padding(.horizontal, Spacing.m)
 
             Spacer(minLength: Spacing.xl)
@@ -81,8 +116,8 @@ struct SaveAudioView: View {
 
     private var nameField: some View {
         TextField("Recording", text: $viewModel.displayName)
-            .font(.title2)
-            .foregroundStyle(.secondary)
+            .font(.largeTitle.weight(.heavy))
+            .foregroundStyle(.primary)
             .multilineTextAlignment(.center)
             .textInputAutocapitalization(.words)
             .submitLabel(.done)
@@ -94,18 +129,27 @@ struct SaveAudioView: View {
     // MARK: - Export
 
     private var exportButtons: some View {
-        VStack(spacing: Spacing.s) {
+        VStack(spacing: Spacing.m) {
             Button {
                 Task { await viewModel.saveAudio() }
             } label: {
                 if viewModel.isExporting && viewModel.videoProgress == nil {
                     ProgressView()
+                        .frame(maxWidth: .infinity)
                 } else {
-                    Label("Save Audio", systemImage: "arrow.down.document")
+                    HStack {
+                        Image(systemName: "waveform")
+                        Text("Save Audio")
+                        Spacer()
+                        Image(systemName: "arrow.down.circle.fill")
+                    }
+                    .frame(maxWidth: .infinity)
                 }
             }
             .buttonStyle(.borderedProminent)
-            .controlSize(.large)
+            .controlSize(.extraLarge)
+            .font(.title3.weight(.bold))
+            .tint(Color.accentColor)
             .disabled(viewModel.isExporting)
 
             Button {
@@ -113,12 +157,22 @@ struct SaveAudioView: View {
             } label: {
                 if viewModel.videoProgress != nil {
                     ProgressView()
+                        .frame(maxWidth: .infinity)
                 } else {
-                    Label("Share Video", systemImage: "square.and.arrow.up")
+                    HStack {
+                        Image(systemName: "video")
+                        Text("Share Video")
+                        Spacer()
+                        Image(systemName: "square.and.arrow.up.circle.fill")
+                    }
+                    .frame(maxWidth: .infinity)
                 }
             }
-            .buttonStyle(.bordered)
-            .controlSize(.large)
+            .buttonStyle(.borderedProminent)
+            .controlSize(.extraLarge)
+            .font(.title3.weight(.bold))
+            .tint(Color(.tertiarySystemFill))
+            .foregroundStyle(.primary)
             .disabled(viewModel.isExporting)
 
             if let progress = viewModel.videoProgress {
@@ -130,9 +184,10 @@ struct SaveAudioView: View {
         .animation(Motion.standard, value: viewModel.videoProgress != nil)
     }
 
-    private var durationText: String {
-        let total = Int(viewModel.duration.rounded())
-        return String(format: "%d:%02d", total / 60, total % 60)
+    private func timeString(_ time: TimeInterval) -> String {
+        guard time.isFinite, !time.isNaN else { return "0:00" }
+        let totalSeconds = max(Int(time.rounded()), 0)
+        return String(format: "%d:%02d", totalSeconds / 60, totalSeconds % 60)
     }
 
     private var shareBinding: Binding<ShareItem?> {
