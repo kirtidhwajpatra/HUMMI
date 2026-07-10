@@ -97,6 +97,13 @@ final class ResultViewModel {
             abPlayer.listeningToProcessed = true
             lastRenderedKey = baseKey(for: .studio)
             phase = .ready
+        } else if !abPlayer.isLoaded {
+            do {
+                try abPlayer.load(original: originalURL, processed: originalURL)
+                abPlayer.listeningToProcessed = false
+            } catch {
+                errorMessage = error.localizedDescription
+            }
         }
     }
 
