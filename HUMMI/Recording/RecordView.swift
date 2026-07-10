@@ -234,7 +234,7 @@ struct RecordView: View {
     private func studioLayout(_ rVM: ResultViewModel) -> some View {
         VStack(spacing: 0) {
             
-            // Hero Waveform Card
+            // Minimal Waveform Area
             VStack(spacing: Spacing.s) {
                 Picker("Mode", selection: Binding(
                     get: { rVM.abPlayer.listeningToProcessed },
@@ -244,7 +244,6 @@ struct RecordView: View {
                     Text("Studio").tag(true)
                 }
                 .pickerStyle(.segmented)
-                .padding(.horizontal)
                 .padding(.top, Spacing.m)
 
                 GeometryReader { geometry in
@@ -273,10 +272,9 @@ struct RecordView: View {
                     )
                 }
                 .frame(height: 180)
-                .padding(.horizontal, Spacing.m)
 
-                // Dedicated Playback Controls
-                HStack(spacing: Spacing.xxl) {
+                // Minimal Playback Controls
+                HStack(spacing: Spacing.xl) {
                     Text(timeString(rVM.abPlayer.currentTime))
                         .font(.callout.monospacedDigit())
                         .foregroundStyle(.secondary)
@@ -284,9 +282,9 @@ struct RecordView: View {
                     Button {
                         rVM.abPlayer.togglePlayPause()
                     } label: {
-                        Image(systemName: rVM.abPlayer.isPlaying ? "pause.circle.fill" : "play.circle.fill")
-                            .font(.system(size: 64))
-                            .foregroundStyle(Color.accentColor)
+                        Image(systemName: rVM.abPlayer.isPlaying ? "pause.fill" : "play.fill")
+                            .font(.system(size: 32))
+                            .foregroundStyle(.primary)
                     }
                     .buttonStyle(.plain)
                     .accessibilityLabel(rVM.abPlayer.isPlaying ? "Pause" : "Play")
@@ -297,9 +295,7 @@ struct RecordView: View {
                 }
                 .padding(.bottom, Spacing.xl)
             }
-            .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 32, style: .continuous))
-            .shadow(color: Color.black.opacity(0.05), radius: 20, x: 0, y: 10)
-            .padding(Spacing.m)
+            .padding(.horizontal, Spacing.l)
             
             Spacer()
             
