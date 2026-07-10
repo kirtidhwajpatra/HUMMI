@@ -58,7 +58,7 @@ struct RootOnboardingView: View {
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
         }
-        .background(Color(.systemBackground))
+        .background(DynamicBackground())
         .sensoryFeedback(Haptic.toggle, trigger: continueTick)
         .animation(pageAnimation, value: page)
         .onChange(of: page) { _, newValue in

@@ -52,6 +52,7 @@ struct SaveAudioView: View {
                         .foregroundStyle(.secondary)
                     
                     Button {
+                        AppInteraction.pulse()
                         viewModel.abPlayer.togglePlayPause()
                     } label: {
                         Image(systemName: viewModel.abPlayer.isPlaying ? "pause.fill" : "play.fill")
@@ -75,7 +76,7 @@ struct SaveAudioView: View {
         }
         .frame(maxWidth: Spacing.contentMaxWidth)
         .frame(maxWidth: .infinity)
-        .background(Color(.systemBackground))
+        .background(DynamicBackground())
         .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
