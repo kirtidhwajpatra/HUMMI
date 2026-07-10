@@ -29,31 +29,31 @@ struct DynamicBackground: View {
                 ZStack {
                     // Blob 1
                     RadialGradient(
-                        gradient: Gradient(colors: [Color.accentColor.opacity(0.12), Color.clear]),
+                        gradient: Gradient(colors: [Color.accentColor.opacity(0.4), Color.clear]),
                         center: .center,
                         startRadius: 10,
-                        endRadius: proxy.size.width * 0.8
+                        endRadius: proxy.size.width * 1.2
                     )
                     .offset(x: isAnimating ? -proxy.size.width * 0.3 : proxy.size.width * 0.3,
                             y: isAnimating ? -proxy.size.height * 0.3 : proxy.size.height * 0.2)
                     
                     // Blob 2
                     RadialGradient(
-                        gradient: Gradient(colors: [Color.accentColor.opacity(0.08), Color.clear]),
+                        gradient: Gradient(colors: [Color.accentColor.opacity(0.35), Color.clear]),
                         center: .center,
                         startRadius: 10,
-                        endRadius: proxy.size.width * 0.9
+                        endRadius: proxy.size.width * 1.0
                     )
                     .offset(x: isAnimating ? proxy.size.width * 0.4 : -proxy.size.width * 0.2,
                             y: isAnimating ? proxy.size.height * 0.4 : -proxy.size.height * 0.4)
                 }
-                .blur(radius: 60)
+                .blur(radius: 80)
             }
             .ignoresSafeArea()
             
             // Pulse Overlay
             Color.accentColor
-                .opacity(isPulsing ? 0.08 : 0.0)
+                .opacity(isPulsing ? 0.3 : 0.0)
                 .ignoresSafeArea()
         }
         .onAppear {
