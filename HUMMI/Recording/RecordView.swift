@@ -64,14 +64,6 @@ struct RecordView: View {
         #if DEBUG
         .task { await autorunIfRequested() }
         #endif
-        .toolbar {
-            ToolbarItemGroup(placement: .keyboard) {
-                Spacer()
-                Button("Done") {
-                    isLyricsFocused = false
-                }
-            }
-        }
     }
 
     // MARK: - Layouts
@@ -111,7 +103,7 @@ struct RecordView: View {
                         isLyricsFocused = showLyrics
                     }
                 } label: {
-                    Image(systemName: showLyrics ? "doc.text.fill" : "doc.text")
+                    Image(systemName: showLyrics ? "text.quote.fill" : "text.quote")
                 }
                 Button { showImporter = true } label: {
                     Image(systemName: "square.and.arrow.down")
@@ -402,18 +394,31 @@ struct RecordView: View {
     private var lyricsCard: some View {
         Group {
             if showLyrics {
-                ZStack(alignment: .topTrailing) {
+                VStack(spacing: Spacing.s) {
+                    if !richTextContext.isEmpty {
+                        HStack(spacing: Spacing.m) {
+                            Spacer()
+                            Button { richTextContext.changeFontSize(increase: false) } label: { Image(systemName: "textformat.size.smaller") }
+                            Button { richTextContext.changeFontSize(increase: true) } label: { Image(systemName: "textformat.size.larger") }
+                            Button { richTextContext.toggleBold() } label: { Image(systemName: "bold") }
+                            ColorPicker("", selection: Binding(get: { .black }, set: { c in richTextContext.changeColor(UIColor(c)) })).labelsHidden()
+                        }
+                        .padding(.trailing, Spacing.m)
+                        .transition(.opacity)
+                    }
+                    
                     ZStack(alignment: .topLeading) {
                         if richTextContext.isEmpty {
                             Text("Paste your recording script")
                                 .font(.system(size: 18))
                                 .foregroundStyle(Color(.tertiaryLabel))
                                 .padding(.horizontal, Spacing.s + 5)
-                                .padding(.top, 8)
+                                .padding(.top, 12)
                                 .allowsHitTesting(false)
                         }
                         RichTextEditor(rtfData: $lyricsData, isFocused: $isLyricsFocused, context: richTextContext)
                             .padding(.horizontal, Spacing.s)
+                            .padding(.top, 4)
                     }
                     .frame(maxHeight: .infinity)
                     .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
@@ -423,18 +428,6 @@ struct RecordView: View {
                             .blendMode(.overlay)
                     )
                     .shadow(color: Color.black.opacity(0.05), radius: 10, x: 0, y: 5)
-                    
-                    if !richTextContext.isEmpty {
-                        HStack(spacing: Spacing.m) {
-                            Button { richTextContext.changeFontSize(increase: false) } label: { Image(systemName: "textformat.size.smaller") }
-                            Button { richTextContext.changeFontSize(increase: true) } label: { Image(systemName: "textformat.size.larger") }
-                            Button { richTextContext.toggleBold() } label: { Image(systemName: "bold") }
-                            ColorPicker("", selection: Binding(get: { .black }, set: { c in richTextContext.changeColor(UIColor(c)) })).labelsHidden()
-                        }
-                        .padding(.trailing, Spacing.l)
-                        .padding(.top, Spacing.s)
-                        .transition(.opacity)
-                    }
                 }
                 .padding(.horizontal, Spacing.m)
                 .transition(.move(edge: .top).combined(with: .opacity).combined(with: .scale(scale: 0.95)))
