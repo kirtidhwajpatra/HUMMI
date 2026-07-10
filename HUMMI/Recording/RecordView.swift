@@ -69,19 +69,30 @@ struct RecordView: View {
     // MARK: - Layouts
 
     private var idleLayout: some View {
-        VStack(spacing: Spacing.m) {
+        VStack(spacing: showLyrics ? Spacing.m : Spacing.xl) {
+            Spacer(minLength: showLyrics ? 0 : Spacing.l)
             lyricsCard
 
             if !isLyricsFocused {
-                HStack(spacing: Spacing.l) {
+                if showLyrics {
+                    HStack(spacing: Spacing.l) {
+                        RecordButton(isRecording: false) {
+                            try? viewModel.start()
+                        }
+                        
+                        recordingSurface()
+                    }
+                    .padding(.horizontal, Spacing.m)
+                } else {
+                    Spacer(minLength: 0)
+                    recordingSurface()
+                    Spacer(minLength: 0)
                     RecordButton(isRecording: false) {
                         try? viewModel.start()
                     }
-                    
-                    recordingSurface()
                 }
-                .padding(.horizontal, Spacing.m)
             }
+            Spacer(minLength: showLyrics ? Spacing.s : Spacing.xl)
         }
         .animation(.snappy, value: isLyricsFocused)
         .toolbar {
@@ -106,31 +117,43 @@ struct RecordView: View {
     }
 
     private var recordingLayout: some View {
-        VStack(spacing: Spacing.m) {
+        VStack(spacing: showLyrics ? Spacing.m : Spacing.xl) {
+            Spacer(minLength: showLyrics ? 0 : Spacing.l)
             lyricsCard
 
             if !isLyricsFocused {
-                HStack(spacing: Spacing.l) {
+                if showLyrics {
+                    HStack(spacing: Spacing.l) {
+                        RecordButton(isRecording: true, rms: viewModel.rms) {
+                            viewModel.stop()
+                        }
+                        
+                        recordingSurface()
+                    }
+                    .padding(.horizontal, Spacing.m)
+                } else {
+                    Spacer(minLength: 0)
+                    recordingSurface()
+                    Spacer(minLength: 0)
                     RecordButton(isRecording: true, rms: viewModel.rms) {
                         viewModel.stop()
                     }
-                    
-                    recordingSurface()
                 }
-                .padding(.horizontal, Spacing.m)
             }
+            Spacer(minLength: showLyrics ? Spacing.s : Spacing.xl)
         }
         .animation(.snappy, value: isLyricsFocused)
     }
 
     private func recordedLayout(_ rVM: ResultViewModel) -> some View {
-        VStack(spacing: Spacing.m) {
+        VStack(spacing: showLyrics ? Spacing.m : Spacing.xl) {
+            Spacer(minLength: showLyrics ? 0 : Spacing.l)
             lyricsCard
 
             if !isLyricsFocused {
                 VStack(spacing: Spacing.xl) {
                     recordingSurface(rVM: rVM)
-                        .padding(.horizontal, Spacing.m)
+                        .padding(.horizontal, showLyrics ? Spacing.m : 0)
                     
                     HStack(spacing: Spacing.xl) {
                         // Play Button
@@ -179,6 +202,7 @@ struct RecordView: View {
                     }
                 }
             }
+            Spacer(minLength: showLyrics ? Spacing.s : Spacing.xl)
         }
         .animation(.snappy, value: isLyricsFocused)
         .toolbar {
@@ -343,9 +367,9 @@ struct RecordView: View {
         let isPlayback = rVM != nil
         let timeText = isPlayback ? timeString(rVM!.abPlayer.currentTime) : elapsedText
         
-        return VStack(spacing: 8) {
+        return VStack(spacing: showLyrics ? 8 : Spacing.xl) {
             Text(timeText)
-                .font(.system(size: 24, weight: .semibold, design: .rounded).monospacedDigit())
+                .font(.system(size: showLyrics ? 24 : 64, weight: .semibold, design: .rounded).monospacedDigit())
                 .foregroundStyle((isPlayback || isRecording) ? Color.primary : Color(.tertiaryLabel))
                 .contentTransition(.numericText())
                 .accessibilityLabel(isRecording ? "Recording time" : "Ready")
@@ -361,20 +385,20 @@ struct RecordView: View {
                         playedTint: .primary
                     )
                 }
-                .frame(height: 32)
+                .frame(height: showLyrics ? 32 : 84)
             } else {
                 LiveWaveform(
                     level: CGFloat(viewModel.rms),
                     isRecording: isRecording,
                     tint: isRecording ? .accentColor : Color(.systemGray3))
-                    .frame(height: 32)
+                    .frame(height: showLyrics ? 32 : 84)
                     .waveformTransitionSource(in: namespace)
             }
         }
-        .padding(.vertical, Spacing.m)
-        .padding(.horizontal, Spacing.m)
+        .padding(.vertical, showLyrics ? Spacing.m : Spacing.xl)
+        .padding(.horizontal, Spacing.l)
         .frame(maxWidth: .infinity)
-        .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: showLyrics ? 24 : 32, style: .continuous))
         .animation(reduceMotion ? nil : .snappy, value: isRecording)
         .animation(.snappy, value: showLyrics)
     }
