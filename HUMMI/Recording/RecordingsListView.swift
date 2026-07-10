@@ -16,12 +16,12 @@ struct RecordingsListView: View {
     var body: some View {
         List {
             ForEach(viewModel.items) { item in
-                Button {
-                    onSelect(item.url)
-                } label: {
-                    RecordingRow(item: item)
-                }
-                .buttonStyle(.plain)
+                RecordingRow(
+                    item: item,
+                    isPlaying: viewModel.currentlyPlayingID == item.id,
+                    onPlayTapped: { viewModel.togglePlayback(for: item) },
+                    onRowTapped: { onSelect(item.url) }
+                )
                 .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                     Button {
                         pendingDeletion = item

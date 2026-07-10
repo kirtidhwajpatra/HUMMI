@@ -5,17 +5,66 @@
 
 import Foundation
 import Observation
+import AVFoundation
 
 /// Drives the Recordings list: loads library items (with cached waveform
 /// metadata) off the main actor, deletes takes, and imports external audio.
 @MainActor
 @Observable
-final class RecordingsListViewModel {
+final class RecordingsListViewModel: NSObject, AVAudioPlayerDelegate {
     private(set) var items: [RecordingItem] = []
     private(set) var isLoading = false
     private(set) var isImporting = false
     /// User-readable; the view presents and clears it.
     var errorMessage: String?
+    
+    private var audioPlayer: AVAudioPlayer?
+    private(set) var currentlyPlayingID: RecordingItem.ID?
+
+    override init() {
+        super.init()
+    }
+
+    func togglePlayback(for item: RecordingItem) {
+        if currentlyPlayingID == item.id {
+            if let player = audioPlayer, player.isPlaying {
+                player.pause()
+                currentlyPlayingID = nil
+            } else {
+                audioPlayer?.play()
+                currentlyPlayingID = item.id
+            }
+        } else {
+            audioPlayer?.stop()
+            do {
+                let urlToPlay: URL
+                if item.isEnhanced, let enhancedURL = try? EnhancementStore.url(for: item.url, preset: .studio), FileManager.default.fileExists(atPath: enhancedURL.path) {
+                    urlToPlay = enhancedURL
+                } else {
+                    urlToPlay = item.url
+                }
+                
+                let session = AVAudioSession.sharedInstance()
+                try? session.setCategory(.playback, mode: .default)
+                try? session.setActive(true)
+                
+                audioPlayer = try AVAudioPlayer(contentsOf: urlToPlay)
+                audioPlayer?.delegate = self
+                audioPlayer?.play()
+                currentlyPlayingID = item.id
+            } catch {
+                errorMessage = "Playback failed: \(error.localizedDescription)"
+            }
+        }
+    }
+
+    nonisolated func audioPlayerDidFinishPlaying(_ player: AVAudioPlayer, successfully flag: Bool) {
+        Task { @MainActor in
+            if self.audioPlayer == player {
+                self.currentlyPlayingID = nil
+            }
+        }
+    }
 
     func load() async {
         isLoading = items.isEmpty

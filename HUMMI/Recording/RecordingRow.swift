@@ -10,19 +10,28 @@ import SwiftUI
 
 struct RecordingRow: View {
     let item: RecordingItem
+    var isPlaying: Bool = false
+    var onPlayTapped: () -> Void = {}
+    var onRowTapped: () -> Void = {}
 
     var body: some View {
         HStack(spacing: Spacing.m) {
-            playAffordance
+            Button(action: onPlayTapped) {
+                playAffordance
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(isPlaying ? "Pause" : "Play")
 
-            VStack(alignment: .leading, spacing: 3) {
-                HStack(spacing: Spacing.xs) {
-                    Text(item.name)
-                        .font(.headline)
-                        .foregroundStyle(.primary)
-                        .lineLimit(1)
-                    if item.isEnhanced { enhancedBadge }
-                }
+            Button(action: onRowTapped) {
+                HStack(spacing: Spacing.m) {
+                    VStack(alignment: .leading, spacing: 3) {
+                        HStack(spacing: Spacing.xs) {
+                            Text(item.name)
+                                .font(.headline)
+                                .foregroundStyle(.primary)
+                                .lineLimit(1)
+                            if item.isEnhanced { enhancedBadge }
+                        }
                 Text(item.date, format: .dateTime.month(.abbreviated).day().year())
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
@@ -37,17 +46,20 @@ struct RecordingRow: View {
                 normalize: true)
                 .frame(width: 64, height: 24)
 
-            Text(durationText)
-                .font(.subheadline.monospacedDigit())
-                .foregroundStyle(.secondary)
+                    Text(durationText)
+                        .font(.subheadline.monospacedDigit())
+                        .foregroundStyle(.secondary)
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(accessibilityText)
+            .accessibilityHint("Double tap to open Studio")
         }
-        .contentShape(Rectangle())
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel(accessibilityText)
     }
 
     private var playAffordance: some View {
-        Image(systemName: "play.fill")
+        Image(systemName: isPlaying ? "pause.fill" : "play.fill")
             .font(.footnote)
             .foregroundStyle(.primary)
             .frame(width: 32, height: 32)
