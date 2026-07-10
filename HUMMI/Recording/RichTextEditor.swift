@@ -74,10 +74,21 @@ class PlainPasteTextView: UITextView {
             super.paste(sender)
             return
         }
+        
+        let normalized = string
+            .replacingOccurrences(of: "\r\n", with: "\n")
+            .replacingOccurrences(of: "\r", with: "\n")
+            .replacingOccurrences(of: "\u{2028}", with: "\n")
+            .replacingOccurrences(of: "\u{2029}", with: "\n")
+            
         let attributes = typingAttributes
-        let attrStr = NSAttributedString(string: string, attributes: attributes)
+        let attrStr = NSAttributedString(string: normalized, attributes: attributes)
+        
+        textStorage.beginEditing()
         textStorage.replaceCharacters(in: selectedRange, with: attrStr)
-        selectedRange = NSRange(location: selectedRange.location + string.count, length: 0)
+        textStorage.endEditing()
+        
+        selectedRange = NSRange(location: selectedRange.location + attrStr.length, length: 0)
         delegate?.textViewDidChange?(self)
     }
 }
