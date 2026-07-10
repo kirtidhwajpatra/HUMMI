@@ -64,6 +64,14 @@ struct RecordView: View {
         #if DEBUG
         .task { await autorunIfRequested() }
         #endif
+        .toolbar {
+            ToolbarItemGroup(placement: .keyboard) {
+                Spacer()
+                Button("Done") {
+                    isLyricsFocused = false
+                }
+            }
+        }
     }
 
     // MARK: - Layouts
@@ -81,7 +89,7 @@ struct RecordView: View {
             RecordButton(isRecording: false) {
                 viewModel.start()
             }
-            .scaleEffect(showLyrics ? 0.7 : 1.0)
+            .scaleEffect(showLyrics ? 0.5 : 1.0)
             .animation(.snappy, value: showLyrics)
 
             if !showLyrics {
@@ -124,7 +132,7 @@ struct RecordView: View {
             RecordButton(isRecording: true, rms: viewModel.rms) {
                 viewModel.stop()
             }
-            .scaleEffect(showLyrics ? 0.7 : 1.0)
+            .scaleEffect(showLyrics ? 0.5 : 1.0)
             .animation(.snappy, value: showLyrics)
 
             if !showLyrics {
@@ -345,9 +353,9 @@ struct RecordView: View {
 
 
     private var recordingSurface: some View {
-        VStack(spacing: showLyrics ? Spacing.s : Spacing.xl) {
+        VStack(spacing: showLyrics ? 4 : Spacing.xl) {
             Text(elapsedText)
-                .font(.system(size: showLyrics ? 32 : 64, weight: .semibold, design: .rounded).monospacedDigit())
+                .font(.system(size: showLyrics ? 24 : 64, weight: .semibold, design: .rounded).monospacedDigit())
                 .foregroundStyle(isRecording ? Color.primary : Color(.tertiaryLabel))
                 .contentTransition(.numericText())
                 .accessibilityLabel(isRecording ? "Recording time" : "Ready")
@@ -357,13 +365,13 @@ struct RecordView: View {
                 level: CGFloat(viewModel.rms),
                 isRecording: isRecording,
                 tint: isRecording ? .accentColor : Color(.systemGray3))
-                .frame(height: showLyrics ? 40 : 84)
+                .frame(height: showLyrics ? 24 : 84)
                 .waveformTransitionSource(in: namespace)
         }
-        .padding(.vertical, showLyrics ? Spacing.s : Spacing.xl)
+        .padding(.vertical, showLyrics ? 8 : Spacing.xl)
         .padding(.horizontal, Spacing.l)
         .frame(maxWidth: .infinity)
-        .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: showLyrics ? 16 : 32, style: .continuous))
+        .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: showLyrics ? 12 : 32, style: .continuous))
         .padding(.horizontal, Spacing.m)
         .animation(reduceMotion ? nil : .snappy, value: isRecording)
         .animation(.snappy, value: showLyrics)
@@ -387,21 +395,34 @@ struct RecordView: View {
         Group {
             if showLyrics {
                 VStack(spacing: 0) {
-                    HStack {
-                        Button { richTextContext.changeFontSize(increase: false) } label: { Image(systemName: "textformat.size.smaller") }
-                        Button { richTextContext.changeFontSize(increase: true) } label: { Image(systemName: "textformat.size.larger") }
-                        Spacer()
-                        Button { richTextContext.toggleBold() } label: { Image(systemName: "bold") }
-                        ColorPicker("", selection: Binding(get: { .black }, set: { c in richTextContext.changeColor(UIColor(c)) })).labelsHidden()
+                    if !richTextContext.isEmpty {
+                        HStack {
+                            Button { richTextContext.changeFontSize(increase: false) } label: { Image(systemName: "textformat.size.smaller") }
+                            Button { richTextContext.changeFontSize(increase: true) } label: { Image(systemName: "textformat.size.larger") }
+                            Spacer()
+                            Button { richTextContext.toggleBold() } label: { Image(systemName: "bold") }
+                            ColorPicker("", selection: Binding(get: { .black }, set: { c in richTextContext.changeColor(UIColor(c)) })).labelsHidden()
+                        }
+                        .padding(.horizontal, Spacing.m)
+                        .padding(.vertical, Spacing.s)
+                        .background(Color(.secondarySystemBackground))
+                        .clipShape(RoundedRectangle(cornerRadius: 16))
+                        .padding(Spacing.s)
+                        .transition(.opacity.combined(with: .move(edge: .top)))
                     }
-                    .padding(.horizontal, Spacing.m)
-                    .padding(.vertical, Spacing.s)
-                    .background(Color(.secondarySystemBackground))
-                    .clipShape(RoundedRectangle(cornerRadius: 16))
-                    .padding(Spacing.s)
                     
-                    RichTextEditor(rtfData: $lyricsData, isFocused: $isLyricsFocused, context: richTextContext)
-                        .padding(.horizontal, Spacing.s)
+                    ZStack(alignment: .topLeading) {
+                        if richTextContext.isEmpty {
+                            Text("Paste your recording script")
+                                .font(.system(size: 18))
+                                .foregroundStyle(Color(.tertiaryLabel))
+                                .padding(.horizontal, Spacing.s + 4)
+                                .padding(.top, Spacing.s + 8)
+                                .allowsHitTesting(false)
+                        }
+                        RichTextEditor(rtfData: $lyricsData, isFocused: $isLyricsFocused, context: richTextContext)
+                            .padding(.horizontal, Spacing.s)
+                    }
                 }
                 .frame(maxHeight: .infinity)
                 .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
@@ -413,6 +434,7 @@ struct RecordView: View {
                 .shadow(color: Color.black.opacity(0.05), radius: 10, x: 0, y: 5)
                 .padding(.horizontal, Spacing.m)
                 .transition(.move(edge: .top).combined(with: .opacity).combined(with: .scale(scale: 0.95)))
+                .layoutPriority(1)
             }
         }
     }

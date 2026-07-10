@@ -4,7 +4,12 @@ import Combine
 
 class RichTextContext: ObservableObject {
     let objectWillChange = ObservableObjectPublisher()
-    weak var textView: UITextView?
+    @Published var isEmpty: Bool = true
+    weak var textView: UITextView? {
+        didSet {
+            isEmpty = textView?.text.isEmpty ?? true
+        }
+    }
     
     func toggleBold() {
         guard let tv = textView else { return }
@@ -85,13 +90,6 @@ struct RichTextEditor: UIViewRepresentable {
         
         self.context.textView = textView
         
-        let toolbar = UIToolbar()
-        toolbar.sizeToFit()
-        let flexSpace = UIBarButtonItem(barButtonSystemItem: .flexibleSpace, target: nil, action: nil)
-        let doneBtn = UIBarButtonItem(title: "Done", style: .prominent, target: context.coordinator, action: #selector(Coordinator.doneTapped))
-        toolbar.items = [flexSpace, doneBtn]
-        textView.inputAccessoryView = toolbar
-        
         return textView
     }
     
@@ -116,6 +114,7 @@ struct RichTextEditor: UIViewRepresentable {
         }
         
         func textViewDidChange(_ textView: UITextView) {
+            parent.context.isEmpty = textView.text.isEmpty
             saveWorkItem?.cancel()
             let workItem = DispatchWorkItem { [weak self, weak textView] in
                 guard let self = self, let tv = textView else { return }
