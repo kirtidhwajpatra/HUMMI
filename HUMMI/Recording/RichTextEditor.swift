@@ -70,25 +70,25 @@ class RichTextContext: ObservableObject {
 
 class PlainPasteTextView: UITextView {
     override func paste(_ sender: Any?) {
-        guard let string = UIPasteboard.general.string else {
-            super.paste(sender)
-            return
-        }
+        let oldLength = textStorage.length
+        let oldSelectedRange = selectedRange
         
-        let normalized = string
-            .replacingOccurrences(of: "\r\n", with: "\n")
-            .replacingOccurrences(of: "\r", with: "\n")
-            .replacingOccurrences(of: "\u{2028}", with: "\n")
-            .replacingOccurrences(of: "\u{2029}", with: "\n")
-            
-        let attributes = typingAttributes
-        let attrStr = NSAttributedString(string: normalized, attributes: attributes)
+        // Let UITextView handle HTML/RTF parsing so paragraphs and newlines 
+        // from websites are correctly preserved.
+        super.paste(sender)
         
+        let newLength = textStorage.length
+        let insertedLength = newLength - oldLength
+        guard insertedLength > 0 else { return }
+        
+        let insertedRange = NSRange(location: oldSelectedRange.location, length: insertedLength)
+        
+        // Strip the pasted formatting (colors, fonts, backgrounds) 
+        // and apply our current text style instead.
         textStorage.beginEditing()
-        textStorage.replaceCharacters(in: selectedRange, with: attrStr)
+        textStorage.setAttributes(typingAttributes, range: insertedRange)
         textStorage.endEditing()
         
-        selectedRange = NSRange(location: selectedRange.location + attrStr.length, length: 0)
         delegate?.textViewDidChange?(self)
     }
 }
