@@ -23,7 +23,7 @@ nonisolated final class ProcessingPipeline {
     /// (Stage A, chunked DFN3 + dry/wet), pitch correction, then the
     /// polish chain (tools/spike/polish.py): high-pass -> surgical EQ ->
     /// de-esser -> multiband compression -> parallel saturation ->
-    /// presence/air -> convolution reverb -> glue, then loudness
+    /// presence/air -> echo -> convolution reverb -> glue, then loudness
     /// normalization. Three stages are A/B alternates disabled by
     /// default — their `isEnabled` seeds the debug screen's toggles:
     /// DFNRestorationStage (adaptive-floor alternative to ML enhance),
@@ -42,10 +42,12 @@ nonisolated final class ProcessingPipeline {
             MultibandCompressorStage(parameters: parameters),
             SaturationStage(parameters: parameters),
             PresenceAirStage(parameters: parameters),
+            EchoStage(parameters: parameters),
             ConvolutionReverbStage(parameters: parameters),
             ReverbStage(parameters: parameters),
             GlueCompressorStage(parameters: parameters),
             LoudnessNormalizeStage(parameters: parameters),
+            VoiceShapeStage(parameters: parameters),
         ]
     }
 

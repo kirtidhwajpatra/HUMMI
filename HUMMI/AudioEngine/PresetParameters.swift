@@ -37,6 +37,22 @@ nonisolated struct PresetParameters: Sendable {
 
     // Parallel saturation stage (0 disables) — more harmonic richness.
     var saturationBlend: Double = 0.22
+    // Saturation drive: 5 dB is warmth; 12+ dB is megaphone grit.
+    var saturationDriveDB: Double = 5.0
+
+    // Echo stage (feedback delay; 0 ms disables). Dry signal is kept at
+    // full level; the echo tail is mixed on top at `echoWet`.
+    var echoDelayMS: Double = 0
+    var echoFeedback: Double = 0.35
+    var echoWet: Double = 0.3
+
+    // Voice shape (all neutral by default; user-set, not preset-set).
+    // Speed is varispeed: duration and pitch change together, like tape.
+    var voiceSpeed: Double = 1.0
+    // Tempo is a time-stretch: duration changes, pitch is preserved.
+    var voiceTempo: Double = 1.0
+    // Deeper (−12) ↔ lighter (+12), in semitones; duration preserved.
+    var voicePitchSemitones: Double = 0
 
     // Presence / air EQ stage — more vocal forwardness and studio sheen.
     var presenceFrequency: Double = 3_000

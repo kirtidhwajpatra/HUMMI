@@ -15,14 +15,16 @@ nonisolated final class SaturationStage: BufferStage {
     static let driveDB = 5.0
 
     private let blend: Float
+    private let driveDB: Double
 
     init(parameters: PresetParameters) {
         self.blend = Float(parameters.saturationBlend)
+        self.driveDB = parameters.saturationDriveDB
     }
 
     func process(_ samples: [Float]) throws -> [Float] {
         guard blend > 0 else { return samples }
-        let drive = Float(pow(10.0, Self.driveDB / 20.0))
+        let drive = Float(pow(10.0, driveDB / 20.0))
         var driven = vDSP.multiply(drive, samples)
         vForce.tanh(driven, result: &driven)
         return vDSP.add(

@@ -16,7 +16,7 @@ struct LiveWaveform: View {
     var isRecording: Bool
     var tint: Color
 
-    @State private var samples: [Float] = LiveWaveform.base
+    @State private var samples: [Float] = [Float](repeating: 0.0, count: LiveWaveform.barCount)
     /// Number of bars visible in the meter.
     private static let barCount = 48
     @State private var phase: Double = 0
@@ -27,6 +27,11 @@ struct LiveWaveform: View {
     var body: some View {
         WaveformView(peaks: samples, tint: tint, style: .bars, normalize: false)
             .onReceive(tick) { _ in if !reduceMotion { advance() } }
+            .onChange(of: isRecording) { _, newValue in
+                if !newValue {
+                    samples = [Float](repeating: 0.0, count: Self.barCount)
+                }
+            }
             .accessibilityHidden(true)
     }
 
@@ -42,10 +47,10 @@ struct LiveWaveform: View {
             updated.append(next)
             samples = updated
         } else {
-            // Breathing: hold the organic resting shape and let its overall
-            // amplitude swell and settle slowly.
-            let breath = 0.76 + 0.24 * (0.5 + 0.5 * sin(phase * 0.9))
-            samples = Self.base.map { $0 * Float(breath) }
+            // Keep it flat at 0
+            if samples.contains(where: { $0 > 0 }) {
+                samples = [Float](repeating: 0.0, count: Self.barCount)
+            }
         }
     }
 

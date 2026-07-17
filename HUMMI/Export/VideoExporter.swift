@@ -85,10 +85,10 @@ nonisolated enum VideoExporter {
             input: videoInput, adaptor: adaptor, pool: pool, writer: writer,
             background: background, accent: accent, totalFrames: totalFrames,
             progress: progress)
-        try await pumpVideo(context)
-
-        // Audio track from the WAV.
-        try await appendAudio(from: audioURL, to: audioInput)
+        async let videoPump: Void = pumpVideo(context)
+        async let audioPump: Void = appendAudio(from: audioURL, to: audioInput)
+        try await videoPump
+        try await audioPump
         progress(0.97)
 
         await writer.finishWriting()
@@ -258,14 +258,7 @@ nonisolated enum VideoExporter {
                     end: CGPoint(x: 0, y: size.height), options: [])
             }
 
-            // Title.
-            draw(text: AppBranding.name, font: .systemFont(ofSize: 64, weight: .bold),
-                 color: .white, alpha: 1, centeredAt: CGPoint(x: size.width / 2, y: 250))
-            draw(text: "✨ Enhanced", font: .systemFont(ofSize: 34, weight: .semibold),
-                 color: UIColor(red: AppBranding.accentRGBA.r, green: AppBranding.accentRGBA.g,
-                                blue: AppBranding.accentRGBA.b, alpha: 1),
-                 alpha: 1, centeredAt: CGPoint(x: size.width / 2, y: 320))
-
+            // Removed Title.
             // Dim (unplayed) waveform.
             drawWaveform(in: ctx, peaks: peaks, color: UIColor(white: 1, alpha: 0.22))
 

@@ -23,7 +23,7 @@ nonisolated final class PitchCorrectionStage: BufferStage {
     static let maxDeviationSemitones = 0.7
     static let minCorrectionSemitones = 0.03   // < 3 cents: already in tune
     static let minSegmentFrames = 10           // 0.1 s of steady pitch
-    static let crossfadeSamples = 480          // 10 ms splice fades
+    static let crossfadeSamples = 960          // 20 ms splice fades
     static let contextSamples = 12_000         // 0.25 s shifter warm-up
 
     private let strength: Double
@@ -101,36 +101,30 @@ nonisolated final class PitchCorrectionStage: BufferStage {
     }
 
     /// Renders `range` through the pitch shifter with real audio as
-    /// warm-up context and the unit's measured latency removed, so the
-    /// result aligns sample-for-sample with the input.
+    /// warm-up context (padded with zeros if near the start of the file)
+    /// and linear group-delay corrected, returning `range.count` samples.
     static func shiftedSegment(
         _ samples: [Float], range: Range<Int>, cents: Double
     ) throws -> [Float] {
-        let latency = try measureLatency(cents: cents)
-        let pre = min(contextSamples, range.lowerBound)
-        var input = Array(samples[(range.lowerBound - pre)..<range.upperBound])
-        input.append(contentsOf: [Float](repeating: 0, count: latency + 4_800))
+        let latency = Int((cents * 0.3).rounded())
+        let pre = contextSamples
+        var input: [Float] = []
+        if range.lowerBound < pre {
+            let padCount = pre - range.lowerBound
+            input.append(contentsOf: [Float](repeating: 0, count: padCount))
+            input.append(contentsOf: samples[0..<range.upperBound])
+        } else {
+            input.append(contentsOf: samples[(range.lowerBound - pre)..<range.upperBound])
+        }
+        let padCount = 4_800 + abs(latency)
+        input.append(contentsOf: [Float](repeating: 0, count: padCount))
+
         let rendered = try AudioUnitRenderer.render(input, through: makeNode(cents: cents))
-        let offset = latency + pre
-        guard rendered.count >= offset + range.count else {
+        let offset = pre + latency
+        guard offset >= 0, rendered.count >= offset + range.count else {
             throw DFNError.audioFile("pitch shifter returned a short render")
         }
         return Array(rendered[offset..<offset + range.count])
-    }
-
-    /// The shifter's group delay for this configuration, measured with
-    /// an impulse (AVAudioUnitTimePitch does not report a usable latency
-    /// for offline rendering).
-    static func measureLatency(cents: Double) throws -> Int {
-        let markerAt = 1_000
-        var probe = [Float](repeating: 0, count: markerAt)
-        probe.append(1)
-        probe.append(contentsOf: [Float](repeating: 0, count: 24_000))
-        let rendered = try AudioUnitRenderer.render(probe, through: makeNode(cents: cents))
-        var peakIndex: vDSP_Length = 0
-        var peakValue: Float = 0
-        vDSP_maxmgvi(rendered, 1, &peakValue, &peakIndex, vDSP_Length(rendered.count))
-        return max(0, Int(peakIndex) - markerAt)
     }
 
     /// Replaces output[start...] with the shifted segment, raised-cosine

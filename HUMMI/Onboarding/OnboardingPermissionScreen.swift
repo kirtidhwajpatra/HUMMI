@@ -30,11 +30,7 @@ struct OnboardingPermissionScreen: View {
 
     var body: some View {
         OnboardingLayout {
-            Image(systemName: "mic.badge.plus")
-                .font(.system(size: 56))
-                .symbolRenderingMode(.hierarchical)
-                .foregroundStyle(.tint)
-                .accessibilityHidden(true)
+            VocalAura(tint: .accentColor)
                 .staggered(0, appeared: appeared)
 
             VStack(spacing: Spacing.s) {

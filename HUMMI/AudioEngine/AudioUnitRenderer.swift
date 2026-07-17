@@ -15,8 +15,13 @@ nonisolated enum AudioUnitRenderer {
     /// `channels: 2` duplicates the mono input into a stereo graph and
     /// averages the output back to mono — required for units that
     /// reject mono buses (AVAudioUnitReverb).
+    ///
+    /// `expectedFrames` overrides the output length for rate-changing
+    /// units (AVAudioUnitTimePitch), where output ≠ input length; the
+    /// default renders exactly the input's length.
     static func render(
-        _ samples: [Float], through node: AVAudioUnit, channels: UInt32 = 1
+        _ samples: [Float], through node: AVAudioUnit, channels: UInt32 = 1,
+        expectedFrames: Int? = nil
     ) throws -> [Float] {
         guard let format = AVAudioFormat(
             commonFormat: .pcmFormatFloat32, sampleRate: DFNContract.sampleRate,
@@ -58,10 +63,11 @@ nonisolated enum AudioUnitRenderer {
             throw DFNError.audioFile("could not allocate the render output buffer")
         }
 
+        let targetFrames = expectedFrames ?? samples.count
         var output: [Float] = []
-        output.reserveCapacity(samples.count)
-        while output.count < samples.count {
-            let remaining = AVAudioFrameCount(samples.count - output.count)
+        output.reserveCapacity(targetFrames)
+        while output.count < targetFrames {
+            let remaining = AVAudioFrameCount(targetFrames - output.count)
             let status = try engine.renderOffline(
                 min(chunkFrames, remaining), to: renderBuffer)
             switch status {

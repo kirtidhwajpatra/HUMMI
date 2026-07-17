@@ -67,6 +67,19 @@ final class RecordingViewModel {
         }
     }
 
+    /// Stops and throws the take away — nothing lands in the library and
+    /// `lastRecording` stays untouched.
+    func cancel() {
+        guard isRecording else { return }
+        if let url = recorder.stop() {
+            try? FileManager.default.removeItem(at: url)
+        }
+        isRecording = false
+        elapsed = 0
+        rms = 0
+        peak = 0
+    }
+
     private func finish(url: URL, notice: String?) {
         isRecording = false
         self.notice = notice

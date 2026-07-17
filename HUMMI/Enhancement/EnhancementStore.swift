@@ -24,6 +24,14 @@ nonisolated enum EnhancementStore {
         return try directory().appendingPathComponent("\(stem)__\(preset.rawValue).wav")
     }
 
+    /// The one ML-cleaned source used by the realtime Studio graph.
+    static func enhancedBaseURL(for original: URL) throws -> URL {
+        let stem = original.deletingPathExtension().lastPathComponent
+        // Version the cache so a safer normalized base replaces early preview
+        // files that could contain inter-sample overs after ML enhancement.
+        return try directory().appendingPathComponent("\(stem)__enhanced-base-v2.wav")
+    }
+
     /// Which base presets already have a saved render for this take.
     static func existingPresets(for original: URL) -> [StudioPreset] {
         StudioPreset.allCases.filter { preset in
@@ -39,6 +47,9 @@ nonisolated enum EnhancementStore {
     /// Removes every enhanced render for a take (called when the original
     /// is deleted).
     static func deleteAll(for original: URL) {
+        if let baseURL = try? enhancedBaseURL(for: original) {
+            try? FileManager.default.removeItem(at: baseURL)
+        }
         for preset in StudioPreset.allCases {
             if let url = try? url(for: original, preset: preset) {
                 try? FileManager.default.removeItem(at: url)

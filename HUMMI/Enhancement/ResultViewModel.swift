@@ -3,370 +3,336 @@
 //  HUMMI
 //
 
+import AVFoundation
 import Foundation
 import Observation
 
-/// Drives the Result screen: renders the enhancement pipeline for the
-/// chosen preset (with live progress), caches one render per
-/// preset/adjustment so switching back is instant, persists the three
-/// base presets alongside the original, and feeds the A/B player.
+/// Owns the Studio session. Preview settings are applied to the live graph;
+/// `renderFinalStudioVersion` is the sole path that runs the full pipeline.
 @MainActor
 @Observable
 final class ResultViewModel {
-    enum Phase: Equatable {
-        case idle              // recorded but not yet enhanced
-        case enhancing(Double?)  // rendering; fraction if known
-        case ready             // a render is loaded for A/B
-    }
+    enum Phase: Equatable { case idle, enhancing(Double?), ready }
 
     let originalURL: URL
-    /// The user-facing take name, editable on the Save screen.
     var displayName: String
     private(set) var peaks: [Float] = []
     private(set) var duration: TimeInterval = 0
     private(set) var phase: Phase = .idle
     private(set) var isRendering = false
+    private(set) var isSavingStudio = false
     var errorMessage: String?
 
-    private(set) var selectedPreset: StudioPreset = .studio
+    var selectedCharacterID = "studio"
+    var selectedSpaceID = "dry"
+    private(set) var filterTapCount = 0
+    var autotuneStrength = 0.0
+    var reverbAmount = 0.0
+    var noiseRemoval = 1.0
+    var warmth = 0.0
+    var voiceSpeed = 1.0
+    var voiceTempo = 1.0
+    var voicePitch = 0.0
+    var eqLow = 0.0
+    var eqMid = 0.0
+    var eqHigh = 0.0
+    var reverbDecay = 0.2
+    var reverbPredelay = 0.0
+    var saturation = 0.0
 
-    // The four adjustable fields, initialized from the selected preset.
-    var autotuneStrength: Double
-    var reverbAmount: Double
-    var noiseRemoval: Double
-    var warmth: Double
+    let abPlayer = RealtimePreviewEngine()
+    private(set) var isTuningPreview = false
+    private var currentURL: URL?
+    private var enhancedBaseURL: URL?
+    private var progressTicker: Task<Void, Never>?
+    private var autotunePreviewTask: Task<Void, Never>?
+    private var originalSamples: [Float]?
+    private var previewedAutotune = 0.0
+    private var enhanceStart: Date?
+    private var lastMLFraction = 0.0
 
-    let abPlayer = ABPlayer()
-
-    // Export state.
+    private let pro = ProStore.shared
     private(set) var isExporting = false
     private(set) var videoProgress: Double?
     var shareItem: ShareItem?
     var paywallReason: PaywallPlaceholderView.Reason?
     var removeWatermark = false
-    private let pro = ProStore.shared
 
-    /// The enhanced render currently loaded for A/B — the export source.
-    private var currentURL: URL?
-
-    /// Rendered file per parameter key; base presets also persist to disk.
-    private var cache: [String: URL] = [:]
-    /// The key whose render is currently loaded, so we can tell when the
-    /// sliders have diverged (→ show "Apply").
-    private var lastRenderedKey: String?
-    private var progressTicker: Task<Void, Never>?
-    private var enhanceStart: Date?
-    private var lastMLFraction: Double = 0
+    var selectedCharacter: CharacterFilter { FilterLibrary.character(id: selectedCharacterID) }
+    var selectedSpace: SpaceFilter { FilterLibrary.space(id: selectedSpaceID) }
+    var isVoiceShaped: Bool { voiceSpeed != 1 || voiceTempo != 1 || voicePitch != 0 }
+    /// True when any Studio Panel slider has moved off the selected
+    /// character/space preset — drives the "custom adjustments" badge.
+    var isCustomized: Bool {
+        let s = selectedCharacter.settings
+        return eqLow != s.lowGain || eqMid != s.midGain || eqHigh != s.highGain
+            || saturation != s.saturation || autotuneStrength != s.autotune
+            || voicePitch != s.pitch || voiceSpeed != s.speed || voiceTempo != s.tempo
+            || reverbAmount != selectedSpace.amount
+    }
+    /// Kept for the legacy voice-control component; adjustments now apply live.
+    var isDirty: Bool { false }
+    var canExport: Bool { pro.isPro || pro.canExportForFree(duration: duration) }
+    var isPro: Bool { pro.isPro }
 
     init(originalURL: URL) {
         self.originalURL = originalURL
-        self.displayName = RecordingNames.name(for: originalURL)
-        let p = StudioPreset.default.parameters
-        autotuneStrength = p.pitchCorrectionStrength
-        reverbAmount = p.reverbWet
-        noiseRemoval = p.mlEnhanceDryWet
-        warmth = p.warmthGainDB
+        displayName = RecordingNames.name(for: originalURL)
+        resetToPreset()
     }
-
-    /// Sliders diverged from the loaded render → an Apply is pending.
-    var isDirty: Bool {
-        guard case .ready = phase, let lastRenderedKey else { return false }
-        return key() != lastRenderedKey
-    }
-
-    // MARK: - Lifecycle
 
     func onAppear() async {
         if peaks.isEmpty {
-            let meta = await Self.loadMetadata(originalURL)
-            peaks = meta.peaks
-            duration = meta.duration
+            let metadata = await Self.loadMetadata(originalURL)
+            peaks = metadata.peaks; duration = metadata.duration
         }
-        // Preload any renders already on disk into the cache.
-        for preset in EnhancementStore.existingPresets(for: originalURL) {
-            if let url = try? EnhancementStore.url(for: originalURL, preset: preset) {
-                cache[baseKey(for: preset)] = url
-            }
-        }
-        // If this take was already enhanced, open straight into A/B,
-        // listening to the enhanced ("After") rendition.
-        if case .idle = phase, let studioURL = cache[baseKey(for: .studio)] {
-            selectedPreset = .studio
-            syncSliders(to: .studio)
-            await loadIntoPlayer(studioURL)
-            abPlayer.listeningToProcessed = true
-            lastRenderedKey = baseKey(for: .studio)
-            phase = .ready
-        } else if !abPlayer.isLoaded {
-            do {
-                try abPlayer.load(original: originalURL, processed: originalURL)
-                abPlayer.listeningToProcessed = false
-            } catch {
-                errorMessage = error.localizedDescription
-            }
+        if !abPlayer.isLoaded {
+            do { try abPlayer.load(original: originalURL, enhancedBase: originalURL) }
+            catch { errorMessage = error.localizedDescription }
         }
     }
 
-    func tearDown() {
-        progressTicker?.cancel()
-        progressTicker = nil
-        abPlayer.unload()
-    }
+    func tearDown() { progressTicker?.cancel(); autotunePreviewTask?.cancel(); abPlayer.unload() }
 
-    // MARK: - Actions
+    /// Opens Studio on the original audio. ML enhancement is deliberately
+    /// excluded from the realtime path until it can pass device listening QA.
+    func enhanceWithStudio() async { await prepareRealtimePreview() }
 
-    /// The prominent "✨ Studio" button.
-    func enhanceWithStudio() async {
-        selectedPreset = .studio
-        syncSliders(to: .studio)
-        await render()
-        // Land on the enhanced rendition so the effect is audible.
-        if case .ready = phase { abPlayer.listeningToProcessed = true }
-    }
-
-    func selectPreset(_ preset: StudioPreset) async {
-        guard preset != selectedPreset, !isRendering else { return }
-        selectedPreset = preset
-        syncSliders(to: preset)
-        await render()
-    }
-
-    func applyAdjustments() async {
+    func prepareRealtimePreview() async {
         guard !isRendering else { return }
-        await render()
-    }
-
-    /// Persist the current name so the library reflects it.
-    func commitName() {
-        RecordingNames.setName(displayName, for: originalURL)
-    }
-
-    // MARK: - Rendering
-
-    private func render() async {
-        let k = key()
-        if let cached = cache[k] {                 // instant switch
-            await loadIntoPlayer(cached)
-            lastRenderedKey = k
-            phase = .ready
-            return
-        }
-
-        isRendering = true
-        phase = .enhancing(nil)
-        startProgressEstimator()
-        defer {
-            isRendering = false
-            stopProgressEstimator()
-        }
-
-        let parameters = effectiveParameters()
-        let base = isBaseRender
-        let preset = selectedPreset
         do {
-            let outputURL: URL = base
-                ? try EnhancementStore.url(for: originalURL, preset: preset)
-                : FileManager.default.temporaryDirectory
-                    .appendingPathComponent("enhanced-\(UUID().uuidString).wav")
-            try await Self.render(
-                originalURL: originalURL, parameters: parameters, outputURL: outputURL
-            ) { [weak self] fraction in
-                Task { @MainActor in self?.registerMLProgress(fraction) }
+            try abPlayer.load(original: originalURL, enhancedBase: originalURL)
+            previewedAutotune = 0  // load replaced any autotuned studio buffer
+            abPlayer.listeningToProcessed = true
+            phase = .ready
+            applyRealtimePreview()
+        } catch { errorMessage = error.localizedDescription; phase = .idle }
+    }
+
+    func selectCharacter(_ id: String) {
+        guard id != selectedCharacterID else { return }
+        selectedCharacterID = id; filterTapCount += 1; resetCharacterControls()
+        applyRealtimePreview(ramp: .milliseconds(150))  // musical, not clicky
+    }
+
+    func selectSpace(_ id: String) {
+        guard id != selectedSpaceID else { return }
+        selectedSpaceID = id; filterTapCount += 1; resetSpaceControls()
+        applyRealtimePreview(ramp: .milliseconds(150))
+    }
+
+    func applyRealtimePreview(ramp: Duration = .milliseconds(60)) {
+        currentURL = nil
+        guard abPlayer.isLoaded else { return }
+        // Panel sliders are absolute: selecting a character seeds them with
+        // its values, so they replace the preset rather than stack on top
+        // (stacking played Deep and Chipmunk at double their pitch shift).
+        var settings = selectedCharacter.settings
+        settings.lowGain = eqLow; settings.midGain = eqMid; settings.highGain = eqHigh
+        settings.saturation = saturation; settings.pitch = voicePitch; settings.speed = voiceSpeed; settings.tempo = voiceTempo
+        settings.autotune = autotuneStrength
+        // Moving Decay off the space's own value overrides its room: the
+        // Apple reverb has no decay parameter, so the nearest-sized factory
+        // preset stands in. The id carries the override so the engine
+        // reloads the preset only when the bucket actually changes.
+        let space = selectedSpace
+        let decayCustom = abs(reverbDecay - space.decay) > 0.05
+        let preset = decayCustom ? Self.reverbPreset(forDecay: reverbDecay) : space.preset
+        let spaceID = decayCustom ? "\(space.id)-decay\(preset.map { String($0.rawValue) } ?? "")" : space.id
+        let liveSpace = SpaceFilter(id: spaceID, name: space.name, tagline: space.tagline, glyph: space.glyph,
+                                    tile: space.tile, preset: preset, amount: reverbAmount,
+                                    decay: reverbDecay, predelay: reverbPredelay)
+        abPlayer.apply(character: settings, space: liveSpace, ramp: ramp)
+        scheduleAutotunePreview()
+    }
+
+    /// Nearest-sized factory room for a decay time, smallest to largest.
+    static func reverbPreset(forDecay decay: Double) -> AVAudioUnitReverbPreset {
+        switch decay {
+        case ..<0.5: .smallRoom
+        case ..<1.0: .mediumRoom
+        case ..<1.8: .largeRoom
+        case ..<2.8: .largeHall
+        default: .cathedral
+        }
+    }
+
+    /// Autotune has no realtime AU, so the preview re-renders the studio
+    /// buffer through PitchCorrectionStage in the background (debounced for
+    /// slider drags) and hot-swaps it — this is what makes Hard Tune audible.
+    private func scheduleAutotunePreview() {
+        guard abs(autotuneStrength - previewedAutotune) > 0.001 else { return }
+        autotunePreviewTask?.cancel()
+        autotunePreviewTask = Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .milliseconds(350))
+            guard let self, !Task.isCancelled else { return }
+            self.isTuningPreview = true
+            defer { self.isTuningPreview = false }
+            do {
+                let original = try await self.cachedOriginalSamples()
+                let strength = self.autotuneStrength
+                let tuned = strength > 0
+                    ? try await Self.pitchCorrected(original, strength: strength)
+                    : original
+                guard !Task.isCancelled else { return }
+                self.abPlayer.replaceStudioSamples(tuned)
+                self.previewedAutotune = strength
+            } catch {
+                if !Task.isCancelled { self.errorMessage = error.localizedDescription }
             }
-            cache[k] = outputURL
-            lastRenderedKey = k
-            await loadIntoPlayer(outputURL)
-            phase = .ready
-        } catch {
-            errorMessage = error.localizedDescription
-            phase = abPlayer.isLoaded ? .ready : .idle
         }
     }
 
-    /// Loads a processed render for A/B, keeping the current playhead and
-    /// play/pause state so switching presets doesn't interrupt listening.
-    private func loadIntoPlayer(_ processedURL: URL) async {
-        currentURL = processedURL
-        let wasPlaying = abPlayer.isPlaying
-        let time = abPlayer.currentTime
+    private func cachedOriginalSamples() async throws -> [Float] {
+        if let originalSamples { return originalSamples }
+        let samples = try await Self.loadSamples(from: originalURL)
+        originalSamples = samples
+        return samples
+    }
+
+    func resetToPreset() { resetCharacterControls(); resetSpaceControls() }
+
+    func resetVoiceShape() { voiceSpeed = 1; voiceTempo = 1; voicePitch = 0; applyRealtimePreview() }
+
+    func applyAdjustments() async { applyRealtimePreview() }
+
+    func renderFinalStudioVersion() async -> Bool {
+        guard !isSavingStudio else { return false }
+        isSavingStudio = true
+        defer { isSavingStudio = false }
         do {
-            try abPlayer.load(original: originalURL, processed: processedURL)
-            if time > 0, time < abPlayer.duration { abPlayer.seek(to: time) }
-            if wasPlaying { abPlayer.play() }
-        } catch {
-            errorMessage = error.localizedDescription
-        }
+            // The export renders the studio buffer, so a pending autotune
+            // preview must land first or the save would miss it.
+            scheduleAutotunePreview()
+            if let pending = autotunePreviewTask { await pending.value }
+            let destination = try EnhancementStore.url(for: originalURL, preset: .studio)
+            try await abPlayer.exportOffline(to: destination)
+            currentURL = destination
+            return true
+        } catch { errorMessage = error.localizedDescription; return false }
     }
 
-    // MARK: - Export
-
-    /// Whether the free tier allows exporting this take.
-    var canExport: Bool { pro.isPro || pro.canExportForFree(duration: duration) }
-
-    var isPro: Bool { pro.isPro }
+    func commitName() { RecordingNames.setName(displayName, for: originalURL) }
 
     func saveAudio() async {
-        guard let source = currentURL, !isExporting else { return }
-        guard canExport else { paywallReason = .longExport; return }
-        isExporting = true
-        defer { isExporting = false }
+        guard !isExporting, canExport else { if !canExport { paywallReason = .longExport }; return }
+        if currentURL == nil, !(await renderFinalStudioVersion()) { return }
+        guard let currentURL else { return }
+        isExporting = true; defer { isExporting = false }
         do {
-            let formatRaw = UserDefaults.standard.string(forKey: "exportFormat") ?? ExportFormat.m4a.rawValue
-            if formatRaw == ExportFormat.wav.rawValue {
-                let output = exportURL(extension: "wav")
-                if FileManager.default.fileExists(atPath: output.path) {
-                    try FileManager.default.removeItem(at: output)
-                }
-                try FileManager.default.copyItem(at: source, to: output)
-                shareItem = ShareItem(url: output)
-            } else {
-                let output = exportURL(extension: "m4a")
-                try await AudioExporter.exportM4A(from: source, to: output)
-                shareItem = ShareItem(url: output)
-            }
-        } catch {
-            errorMessage = error.localizedDescription
-        }
+            let format = UserDefaults.standard.string(forKey: "exportFormat") ?? ExportFormat.m4a.rawValue
+            let output = exportURL(extension: format == ExportFormat.wav.rawValue ? "wav" : "m4a")
+            try? FileManager.default.removeItem(at: output)
+            if format == ExportFormat.wav.rawValue { try FileManager.default.copyItem(at: currentURL, to: output) }
+            else { try await AudioExporter.exportM4A(from: currentURL, to: output) }
+            shareItem = ShareItem(url: output)
+        } catch { errorMessage = error.localizedDescription }
     }
 
     func shareVideo() async {
-        guard let source = currentURL, !isExporting else { return }
-        guard canExport else { paywallReason = .longExport; return }
-        // Free tier always watermarks; only Pro can remove it.
-        let watermark = !(pro.isPro && removeWatermark)
-        isExporting = true
-        videoProgress = 0
-        defer {
-            isExporting = false
-            videoProgress = nil
-        }
+        guard !isExporting, canExport else { if !canExport { paywallReason = .longExport }; return }
+        if currentURL == nil, !(await renderFinalStudioVersion()) { return }
+        guard let currentURL else { return }
+        isExporting = true; videoProgress = 0
+        defer { isExporting = false; videoProgress = nil }
         do {
             let output = exportURL(extension: "mp4")
-            try await VideoExporter.exportMP4(
-                audioURL: source, peaks: peaks, duration: duration,
-                watermark: watermark, to: output
-            ) { [weak self] fraction in
-                Task { @MainActor in self?.videoProgress = fraction }
+            try await VideoExporter.exportMP4(audioURL: currentURL, peaks: peaks, duration: duration,
+                                               watermark: false, to: output) { [weak self] progress in
+                Task { @MainActor in self?.videoProgress = progress }
             }
             shareItem = ShareItem(url: output)
-        } catch {
-            errorMessage = error.localizedDescription
-        }
+        } catch { errorMessage = error.localizedDescription }
     }
 
-    /// The watermark-removal toggle is Pro-gated.
-    func toggleRemoveWatermark() {
-        if pro.isPro {
-            removeWatermark.toggle()
-        } else {
-            paywallReason = .removeWatermark
-        }
+    func toggleRemoveWatermark() { pro.isPro ? { removeWatermark.toggle() }() : { paywallReason = .removeWatermark }() }
+
+    private func resetCharacterControls() {
+        let settings = selectedCharacter.settings
+        autotuneStrength = settings.autotune; saturation = settings.saturation
+        voiceSpeed = settings.speed; voiceTempo = settings.tempo; voicePitch = settings.pitch
+        eqLow = settings.lowGain; eqMid = settings.midGain; eqHigh = settings.highGain
+        warmth = settings.lowGain
     }
 
-    private func exportURL(extension ext: String) -> URL {
-        let trimmed = displayName.trimmingCharacters(in: .whitespacesAndNewlines)
-        let base = trimmed.isEmpty ? AppBranding.name : trimmed
-        let name = base.replacingOccurrences(of: " ", with: "-")
-        return FileManager.default.temporaryDirectory
-            .appendingPathComponent("\(name).\(ext)")
+    private func resetSpaceControls() {
+        let space = selectedSpace
+        reverbAmount = space.amount; reverbDecay = space.decay; reverbPredelay = space.predelay
     }
 
-    // MARK: - Parameters & keys
-
-    private func effectiveParameters() -> PresetParameters {
-        var p = selectedPreset.parameters
-        p.pitchCorrectionStrength = autotuneStrength
-        p.reverbWet = reverbAmount
-        p.mlEnhanceDryWet = noiseRemoval
-        p.warmthGainDB = warmth
+    private func offlineParameters() -> PresetParameters {
+        var p = StudioPreset.studio.parameters
+        p.mlEnhanceDryWet = 1; p.warmthGainDB = eqLow
+        p.presenceGainDB = eqMid
+        p.airGainDB = eqHigh
+        p.saturationBlend = min(max(saturation / 100, 0), 1)
+        p.pitchCorrectionStrength = autotuneStrength; p.reverbWet = min(max(reverbAmount / 100, 0), 0.7)
+        p.voiceSpeed = voiceSpeed; p.voiceTempo = voiceTempo; p.voicePitchSemitones = voicePitch
         return p
     }
 
-    private func syncSliders(to preset: StudioPreset) {
-        let d = preset.parameters
-        autotuneStrength = d.pitchCorrectionStrength
-        reverbAmount = d.reverbWet
-        noiseRemoval = d.mlEnhanceDryWet
-        warmth = d.warmthGainDB
+    private func createEnhancedBase(at output: URL) async throws {
+        isRendering = true; phase = .enhancing(nil); startProgress()
+        defer { isRendering = false; stopProgress() }
+        try await Self.renderBase(originalURL: originalURL, outputURL: output) { [weak self] fraction in
+            Task { @MainActor in self?.lastMLFraction = fraction }
+        }
     }
 
-    private var isBaseRender: Bool {
-        key() == baseKey(for: selectedPreset)
-    }
-
-    private func key() -> String {
-        Self.key(preset: selectedPreset, autotune: autotuneStrength,
-                 reverb: reverbAmount, noise: noiseRemoval, warmth: warmth)
-    }
-
-    private func baseKey(for preset: StudioPreset) -> String {
-        let d = preset.parameters
-        return Self.key(preset: preset, autotune: d.pitchCorrectionStrength,
-                        reverb: d.reverbWet, noise: d.mlEnhanceDryWet, warmth: d.warmthGainDB)
-    }
-
-    private static func key(
-        preset: StudioPreset, autotune: Double, reverb: Double,
-        noise: Double, warmth: Double
-    ) -> String {
-        func f(_ v: Double) -> String { String(format: "%.3f", v) }
-        return "\(preset.rawValue)|\(f(autotune))|\(f(reverb))|\(f(noise))|\(f(warmth))"
-    }
-
-    // MARK: - Progress
-
-    private func registerMLProgress(_ fraction: Double) {
-        lastMLFraction = fraction
-        refreshProgress()
-    }
-
-    private func startProgressEstimator() {
-        enhanceStart = Date()
-        lastMLFraction = 0
-        progressTicker?.cancel()
+    private func startProgress() {
+        enhanceStart = .now
         progressTicker = Task { @MainActor [weak self] in
-            while let self, !Task.isCancelled {
-                guard case .enhancing = self.phase else { break }
-                self.refreshProgress()
+            while let self, !Task.isCancelled, self.isRendering {
+                let elapsed = Date().timeIntervalSince(self.enhanceStart ?? .now)
+                self.phase = .enhancing(min(max(self.lastMLFraction * 0.8, elapsed / max(4, self.duration * 0.6)), 0.95))
                 try? await Task.sleep(for: .milliseconds(100))
             }
         }
     }
 
-    private func stopProgressEstimator() {
-        progressTicker?.cancel()
-        progressTicker = nil
-        enhanceStart = nil
+    private func stopProgress() { progressTicker?.cancel(); progressTicker = nil; enhanceStart = nil }
+
+    private func exportURL(extension ext: String) -> URL {
+        let name = displayName.trimmingCharacters(in: .whitespacesAndNewlines).replacingOccurrences(of: " ", with: "-")
+        return FileManager.default.temporaryDirectory.appendingPathComponent("\(name.isEmpty ? AppBranding.name : name).\(ext)")
     }
 
-    /// Blends a time-based estimate (so the bar always moves) with the
-    /// ML stage's real progress (≈60% of the work), capped below 1.
-    private func refreshProgress() {
-        guard case .enhancing = phase, let start = enhanceStart else { return }
-        let elapsed = Date().timeIntervalSince(start)
-        let estimatedTotal = max(4.0, duration * 0.6)
-        let timeEased = min(elapsed / estimatedTotal, 0.9)
-        let mlEased = lastMLFraction * 0.6
-        phase = .enhancing(max(timeEased, mlEased))
+    @concurrent private static func renderBase(originalURL: URL, outputURL: URL, onProgress: @escaping @Sendable (Double) -> Void) async throws {
+        var p = PresetParameters(); p.mlEnhanceDryWet = 1; p.normalizePeakCeilingDB = -3
+        let stage = MLEnhanceStage(parameters: p); stage.progressHandler = onProgress
+        let samples = try AudioClipIO.loadMono48k(from: originalURL)
+        let enhanced = try stage.process(samples)
+        let safe = try LoudnessNormalizeStage(parameters: p).process(enhanced)
+        try AudioClipIO.writeWAV(safe, to: outputURL)
     }
 
-    // MARK: - Off-main work
-
-    @concurrent
-    private static func render(
-        originalURL: URL, parameters: PresetParameters, outputURL: URL,
-        onProgress: @escaping @Sendable (Double) -> Void
-    ) async throws {
+    @concurrent private static func render(originalURL: URL, parameters: PresetParameters, outputURL: URL, onProgress: @escaping @Sendable (Double) -> Void) async throws {
         let stages = ProcessingPipeline.makeDefaultStages(parameters: parameters)
-        for stage in stages {
-            (stage as? MLEnhanceStage)?.progressHandler = onProgress
-        }
+        stages.compactMap { $0 as? MLEnhanceStage }.forEach { $0.progressHandler = onProgress }
         try ProcessingPipeline(stages: stages).process(fileAt: originalURL, to: outputURL)
     }
 
-    @concurrent
-    private static func loadMetadata(_ url: URL) async -> (peaks: [Float], duration: TimeInterval) {
-        let meta = (try? RecordingMetadata.loadOrCompute(for: url)) ?? .empty()
-        return (meta.peaks, meta.duration)
+    @concurrent private static func loadSamples(from url: URL) async throws -> [Float] {
+        try AudioClipIO.loadMono48k(from: url)
+    }
+
+    @concurrent private static func pitchCorrected(_ samples: [Float], strength: Double) async throws -> [Float] {
+        var p = PresetParameters()
+        p.pitchCorrectionStrength = strength
+        return try PitchCorrectionStage(parameters: p).process(samples)
+    }
+
+    @concurrent private static func loadMetadata(_ url: URL) async -> (peaks: [Float], duration: TimeInterval) {
+        let metadata = (try? RecordingMetadata.loadOrCompute(for: url)) ?? .empty()
+        return (metadata.peaks, metadata.duration)
+    }
+}
+
+extension ResultViewModel: Hashable {
+    nonisolated static func == (lhs: ResultViewModel, rhs: ResultViewModel) -> Bool {
+        return lhs === rhs
+    }
+    nonisolated func hash(into hasher: inout Hasher) {
+        hasher.combine(ObjectIdentifier(self))
     }
 }

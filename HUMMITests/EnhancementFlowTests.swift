@@ -42,9 +42,14 @@ struct EnhancementFlowTests {
     // MARK: - Presets
 
     @Test func presetParameterMoves() {
+        // Studio is the flagship "produced" preset: audibly more polish
+        // than Default in tuning, sheen, and saturation.
         let studio = StudioPreset.studio.parameters
-        #expect(studio.pitchCorrectionStrength == 0.55)
-        #expect(studio.warmthGainDB == 1.5)
+        let balanced = StudioPreset.balanced.parameters
+        #expect(studio.pitchCorrectionStrength > balanced.pitchCorrectionStrength)
+        #expect(studio.presenceGainDB > balanced.presenceGainDB)
+        #expect(studio.airGainDB > balanced.airGainDB)
+        #expect(studio.saturationBlend > balanced.saturationBlend)
 
         let warm = StudioPreset.warm.parameters
         #expect(warm.warmthGainDB > studio.warmthGainDB)     // more low EQ

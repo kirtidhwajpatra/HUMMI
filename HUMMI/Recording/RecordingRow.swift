@@ -63,9 +63,12 @@ struct RecordingRow: View {
     private var playAffordance: some View {
         Image(systemName: isPlaying ? "pause.fill" : "play.fill")
             .font(.footnote)
-            .foregroundStyle(.primary)
-            .frame(width: 32, height: 32)
-            .background(Color(.systemGray5), in: Circle())
+            .foregroundStyle(.white)
+            .frame(width: 36, height: 36)
+            .background(
+                LinearGradient(colors: [.orange, .pink], startPoint: .topLeading, endPoint: .bottomTrailing),
+                in: Circle())
+            .shadow(color: Color.pink.opacity(0.2), radius: 8, y: 3)
             .accessibilityHidden(true)
     }
 

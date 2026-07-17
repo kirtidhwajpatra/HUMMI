@@ -68,7 +68,10 @@ final class ABPlayer {
         self.format = format
         self.originalBuffer = originalBuffer
         self.processedBuffer = processedBuffer
-        frameLength = min(originalBuffer.frameLength, processedBuffer.frameLength)
+        // The renditions can differ in length (speed/tempo shaping);
+        // play to the end of the longer one. Each player loops its own
+        // buffer, so the shorter rendition simply loops sooner.
+        frameLength = max(originalBuffer.frameLength, processedBuffer.frameLength)
         duration = Double(frameLength) / DFNContract.sampleRate
         currentTime = 0
         engine.prepare()
@@ -163,6 +166,7 @@ final class ABPlayer {
     private static func tailBuffer(
         _ buffer: AVAudioPCMBuffer, fromFrame frame: AVAudioFrameCount, format: AVAudioFormat
     ) -> AVAudioPCMBuffer? {
+        guard buffer.frameLength > frame else { return nil }
         let count = buffer.frameLength - frame
         guard count > 0,
             let out = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: count),

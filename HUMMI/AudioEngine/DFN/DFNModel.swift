@@ -15,7 +15,7 @@ nonisolated struct DFNModel {
             throw DFNError.modelMissing
         }
         let configuration = MLModelConfiguration()
-        configuration.computeUnits = .all
+        configuration.computeUnits = .cpuOnly
         model = try MLModel(contentsOf: url, configuration: configuration)
     }
 

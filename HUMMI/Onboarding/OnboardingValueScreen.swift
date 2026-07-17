@@ -21,8 +21,11 @@ struct OnboardingValueScreen: View {
 
     var body: some View {
         OnboardingLayout {
-            demoHero
+            StudioArtwork(compact: true)
                 .staggered(0, appeared: appeared)
+
+            demoHero
+                .staggered(1, appeared: appeared)
 
             VStack(spacing: Spacing.s) {
                 Text("onboarding.screen1.headline")
@@ -34,7 +37,7 @@ struct OnboardingValueScreen: View {
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
             }
-            .staggered(1, appeared: appeared)
+            .staggered(2, appeared: appeared)
             .accessibilityElement(children: .combine)
         } actions: {
             Button {

@@ -10,14 +10,9 @@
 import SwiftUI
 
 struct SaveAudioView: View {
-    @State private var viewModel: ResultViewModel
+    @Bindable var viewModel: ResultViewModel
     /// Opens the "All recordings" library.
     var onOpenPlaylist: () -> Void = {}
-
-    init(url: URL, onOpenPlaylist: @escaping () -> Void = {}) {
-        self._viewModel = State(initialValue: ResultViewModel(originalURL: url))
-        self.onOpenPlaylist = onOpenPlaylist
-    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -29,12 +24,13 @@ struct SaveAudioView: View {
             
             VStack(spacing: Spacing.m) {
                 HStack(spacing: Spacing.xs) {
-                    Image(systemName: "wand.and.stars")
+                    IconTile(systemImage: "wand.and.stars",
+                             colors: [.pink, .orange], size: 24)
                     Text("Enhanced Studio Audio")
                 }
                 .font(.subheadline.weight(.medium))
                 .foregroundStyle(Color.accentColor)
-                
+
                 GeometryReader { geometry in
                     WaveformView(
                         peaks: viewModel.peaks,
@@ -51,14 +47,12 @@ struct SaveAudioView: View {
                         .font(.callout.monospacedDigit())
                         .foregroundStyle(.secondary)
                     
-                    Button {
+                    GlowIconButton(
+                        icon: viewModel.abPlayer.isPlaying ? "pause.fill" : "play.fill",
+                        label: viewModel.abPlayer.isPlaying ? "Pause" : "Play",
+                        feel: .quiet) {
                         viewModel.abPlayer.togglePlayPause()
-                    } label: {
-                        Image(systemName: viewModel.abPlayer.isPlaying ? "pause.fill" : "play.fill")
-                            .font(.system(size: 32))
-                            .foregroundStyle(.primary)
                     }
-                    .buttonStyle(.plain)
                     
                     Text(timeString(viewModel.duration))
                         .font(.callout.monospacedDigit())
@@ -75,7 +69,7 @@ struct SaveAudioView: View {
         }
         .frame(maxWidth: Spacing.contentMaxWidth)
         .frame(maxWidth: .infinity)
-        .background(Color(.systemBackground))
+        .background(Color.clear)
         .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -108,28 +102,30 @@ struct SaveAudioView: View {
             .accessibilityHint("Tap to rename")
     }
 
-    // MARK: - Export
-
     private var exportButtons: some View {
         VStack(spacing: Spacing.s) {
-            Button {
+            GlowPillButton(
+                title: "Save Audio", icon: "arrow.down.document",
+                feel: .prominent,
+                isBusy: viewModel.isExporting && viewModel.videoProgress == nil,
+                busyTitle: "Exporting…") {
                 Task { await viewModel.saveAudio() }
-            } label: {
-                if viewModel.isExporting {
-                    ProgressView()
-                        .frame(maxWidth: .infinity)
-                } else {
-                    Label("Save Audio", systemImage: "arrow.down.document")
-                        .frame(maxWidth: .infinity)
-                }
             }
-            .buttonStyle(.borderedProminent)
-            .controlSize(.large)
             .disabled(viewModel.isExporting)
 
-            if viewModel.isExporting {
-                ProgressPill(label: "Exporting\u{2026}")
+            GlowPillButton(
+                title: "Share as Video", icon: "play.rectangle",
+                tint: Brand.forest, foreground: Brand.lime, feel: .standard,
+                isBusy: viewModel.isExporting && viewModel.videoProgress != nil,
+                busyTitle: "Exporting Video", progress: viewModel.videoProgress) {
+                Task { await viewModel.shareVideo() }
             }
+            .disabled(viewModel.isExporting)
+
+            Text("Your enhanced take, ready to send anywhere.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .padding(.top, Spacing.xxs)
         }
         .animation(Motion.standard, value: viewModel.isExporting)
     }

@@ -9,7 +9,7 @@ import SwiftUI
 
 /// Where the app's single navigation stack can go.
 enum AppRoute: Hashable {
-    case save(URL)
+    case save(ResultViewModel)
 }
 
 enum HomePhase: Equatable {
@@ -34,7 +34,7 @@ struct ContentView: View {
     
     @State private var audioSession = AudioSessionManager()
     @State private var recording = RecordingViewModel()
-    @State private var selectedTab = 0
+    @State private var selectedTab: AppTab = .record
     @State private var homePath: [AppRoute] = []
     @State private var libraryPath: [AppRoute] = []
     @State private var homePhase: HomePhase = .idle
@@ -47,50 +47,93 @@ struct ContentView: View {
         || ProcessInfo.processInfo.arguments.contains(ProcessingTestViewModel.profileAutorunArgument)
     #endif
 
+    @State private var isNavBarVisible = true
+    @State private var navBarHideTask: Task<Void, Never>?
+    @State private var showLyrics: Bool = false
+
+    private func userDidInteract() {
+        if showLyrics {
+            isNavBarVisible = false
+            return
+        }
+        if !isNavBarVisible {
+            withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
+                isNavBarVisible = true
+            }
+        }
+        navBarHideTask?.cancel()
+        navBarHideTask = Task {
+            try? await Task.sleep(nanoseconds: 3_000_000_000)
+            guard !Task.isCancelled else { return }
+            await MainActor.run {
+                withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
+                    isNavBarVisible = false
+                }
+            }
+        }
+    }
+
     var body: some View {
-        TabView(selection: $selectedTab) {
-            NavigationStack(path: $homePath) {
-                sessionContent
-                    .navigationDestination(for: AppRoute.self) { route in
-                        switch route {
-                        case .save(let url):
-                            SaveAudioView(url: url)
+        ZStack(alignment: .bottom) {
+            // Main Content Area
+            Group {
+                switch selectedTab {
+                case .record:
+                    NavigationStack(path: $homePath) {
+                        sessionContent
+                            .navigationDestination(for: AppRoute.self) { route in
+                                switch route {
+                                case .save(let rVM):
+                                    SaveAudioView(viewModel: rVM)
+                                }
+                            }
+                    }
+                case .library:
+                    NavigationStack(path: $libraryPath) {
+                        RecordingsListView(path: $libraryPath) { selectedURL in
+                            let rVM = ResultViewModel(originalURL: selectedURL)
+                            homePhase = .studio(rVM)
+                            selectedTab = .record
+                            libraryPath.removeAll()
+                        }
+                        .navigationDestination(for: AppRoute.self) { route in
+                            switch route {
+                            case .save(let rVM):
+                                SaveAudioView(viewModel: rVM)
+                            }
                         }
                     }
-            }
-            .tabItem {
-                Label("Record", systemImage: "mic.fill")
-            }
-            .tag(0)
-            
-            NavigationStack(path: $libraryPath) {
-                RecordingsListView(path: $libraryPath) { selectedURL in
-                    let rVM = ResultViewModel(originalURL: selectedURL)
-                    homePhase = .studio(rVM)
-                    selectedTab = 0
-                    libraryPath.removeAll()
-                }
-                .navigationDestination(for: AppRoute.self) { route in
-                    switch route {
-                    case .save(let url):
-                        SaveAudioView(url: url)
+                case .settings:
+                    NavigationStack {
+                        SettingsView()
                     }
                 }
             }
-            .tabItem {
-                Label("Library", systemImage: "list.bullet")
-            }
-            .tag(1)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
             
-            NavigationStack {
-                SettingsView()
+            // Custom Floating Navigation Bar
+            if isNavBarVisible && !showLyrics {
+                FloatingNavBar(selectedTab: $selectedTab)
+                    .padding(.bottom, 0)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
             }
-            .tabItem {
-                Label("Settings", systemImage: "gearshape.fill")
-            }
-            .tag(2)
         }
         .preferredColorScheme(appTheme.colorScheme)
+        .simultaneousGesture(DragGesture(minimumDistance: 0).onChanged { _ in
+            userDidInteract()
+        })
+        .onAppear {
+            userDidInteract()
+        }
+        .onChange(of: showLyrics) { _, show in
+            if show {
+                withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
+                    isNavBarVisible = false
+                }
+            } else {
+                userDidInteract()
+            }
+        }
     }
 
     private var sessionContent: some View {
@@ -98,38 +141,45 @@ struct ContentView: View {
             switch audioSession.state {
             case .idle:
                 ProgressView("Preparing microphone…")
+                    .padding(Spacing.m)
 
             case .ready, .routeChanged, .interrupted:
+                // No padding here: the record/studio canvases own the full
+                // screen and draw their backgrounds edge to edge.
                 RecordView(
                     viewModel: recording,
                     phase: $homePhase,
                     path: $homePath,
                     namespace: transition,
-                    onImportFile: handleImport
+                    onImportFile: handleImport,
+                    showLyrics: $showLyrics
                 )
 
             case .permissionDenied:
-                Text("StudioVocals needs microphone access to record your singing.")
-                    .font(.dsBody)
-                    .multilineTextAlignment(.center)
-                Button("Open Settings") {
-                    openSettings()
+                Group {
+                    Text("StudioVocals needs microphone access to record your singing.")
+                        .font(.dsBody)
+                        .multilineTextAlignment(.center)
+                    Button("Open Settings") {
+                        openSettings()
+                    }
+                    .buttonStyle(.borderedProminent)
                 }
-                .buttonStyle(.borderedProminent)
+                .padding(Spacing.m)
 
             case .failed(let message):
                 Text(message)
                     .font(.dsCallout)
                     .foregroundStyle(.red)
                     .multilineTextAlignment(.center)
+                    .padding(Spacing.m)
             }
         }
-        .padding(Spacing.m)
         .task {
             _ = await audioSession.requestPermissionAndActivate()
             #if DEBUG
             if ProcessInfo.processInfo.arguments.contains("--open-recordings") {
-                selectedTab = 1
+                selectedTab = .library
             }
             if ProcessInfo.processInfo.arguments.contains("--result-first"),
                let first = try? RecordingLibrary.listRecordings().first?.url {
@@ -172,3 +222,4 @@ struct ContentView: View {
 #Preview {
     ContentView()
 }
+

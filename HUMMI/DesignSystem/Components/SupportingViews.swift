@@ -49,11 +49,19 @@ struct EmptyStateView: View {
     var message: String?
 
     var body: some View {
-        ContentUnavailableView {
+        VStack(spacing: Spacing.s) {
+            VocalAura(tint: .accentColor)
             Label(title, systemImage: systemImage)
-        } description: {
-            if let message { Text(message) }
+                .font(.title3.weight(.semibold))
+            if let message {
+                Text(message)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .frame(maxWidth: 250)
+            }
         }
+        .padding(Spacing.l)
     }
 }
 

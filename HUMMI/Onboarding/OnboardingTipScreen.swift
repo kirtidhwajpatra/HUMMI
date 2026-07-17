@@ -24,7 +24,8 @@ struct OnboardingTipScreen: View {
     var body: some View {
         OnboardingLayout {
             if typeSize < .accessibility3 {
-                illustration.staggered(0, appeared: appeared)
+                StudioArtwork(compact: true)
+                    .staggered(0, appeared: appeared)
             }
 
             Text("onboarding.screen2.headline")
@@ -57,24 +58,6 @@ struct OnboardingTipScreen: View {
             }
         }
         .onAppear { appeared = true }
-    }
-
-    /// SF Symbols composition: a person singing into a phone at ~20 cm.
-    private var illustration: some View {
-        HStack(spacing: Spacing.m) {
-            Image(systemName: "person.wave.2")
-                .symbolRenderingMode(.hierarchical)
-            Image(systemName: "arrow.left.and.right")
-                .imageScale(.small)
-                .foregroundStyle(.tertiary)
-            Image(systemName: "iphone")
-                .symbolRenderingMode(.hierarchical)
-        }
-        .font(.system(size: 56))  // iconographic illustration, not body text
-        .foregroundStyle(.tint)
-        .frame(maxWidth: .infinity)
-        .accessibilityElement()
-        .accessibilityLabel(Text("onboarding.screen2.illustration"))
     }
 
     private func bullet(symbol: String, textKey: LocalizedStringKey) -> some View {
