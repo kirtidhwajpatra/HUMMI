@@ -38,7 +38,6 @@ struct RecordView: View {
         .frame(maxWidth: Spacing.contentMaxWidth)
         .frame(maxWidth: .infinity)
         .frame(maxHeight: .infinity)
-        .padding(.horizontal, studioUsesFullWidth ? 0 : Spacing.l)
         .animation(reduceMotion ? .none : Motion.standard, value: phase)
         .sensoryFeedback(trigger: isRecording) { _, recording in
             recording ? Haptic.recordStart : Haptic.recordStop
@@ -71,13 +70,6 @@ struct RecordView: View {
         #if DEBUG
         .task { await autorunIfRequested() }
         #endif
-    }
-
-    /// The aurora home canvas and the studio own their full-bleed
-    /// backgrounds; only the recorded review keeps the standard gutters.
-    private var studioUsesFullWidth: Bool {
-        if case .recorded = phase { return false }
-        return true
     }
 
     // MARK: - Layouts
@@ -131,7 +123,7 @@ struct RecordView: View {
                 Button {
                     path.append(.settings)
                 } label: {
-                    Image(systemName: "ellipsis")
+                    Image(systemName: "gearshape")
                         .font(.system(size: 18, weight: .semibold))
                         .foregroundStyle(Brand.ink)
                         .frame(width: 44, height: 44)
@@ -148,7 +140,7 @@ struct RecordView: View {
                     Button {
                         path.append(.library)
                     } label: {
-                        Image(systemName: "waveform.path")
+                        Image(systemName: "folder")
                             .font(.system(size: 18, weight: .semibold))
                             .foregroundStyle(Brand.ink)
                             .frame(width: 44, height: 44)

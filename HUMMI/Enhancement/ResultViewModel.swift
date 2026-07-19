@@ -53,7 +53,7 @@ final class ResultViewModel {
     var errorMessage: String?
 
     var selectedCharacterID = "studio"
-    var selectedSpaceID = "dry"
+    var selectedSpaceID = "studio-room"
     private(set) var filterTapCount = 0
     var autotuneStrength = 0.0
     var reverbAmount = 0.0

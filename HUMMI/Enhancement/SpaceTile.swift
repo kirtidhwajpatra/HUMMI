@@ -25,14 +25,7 @@ struct SpaceTile: View {
     var body: some View {
         Button(action: action) {
             VStack(spacing: Spacing.s) {
-                ZStack {
-                    Circle()  // minimal: plain white disc, the icon is the colour
-                        .fill(.white)
-                        .frame(width: 54, height: 54)
-                    Image(systemName: filter.glyph)
-                        .font(.title3.weight(.semibold))
-                        .foregroundStyle(filter.dominant)
-                }
+                customSpaceIcon
                 Text(filter.name)
                     .font(.subheadline.weight(isActive ? .bold : .medium))
                     .foregroundStyle(StudioTheme.textPrimary)
@@ -70,5 +63,33 @@ struct SpaceTile: View {
         .accessibilityHint("Applies the \(filter.name) space filter.")
         .accessibilityValue(isActive ? "Selected" : "")
         .accessibilityAddTraits(isActive ? .isSelected : [])
+    }
+
+    private var customSpaceIcon: some View {
+        let decay = filter.decay
+        let ringCount = decay < 0.5 ? 0 : 
+                        decay < 1.0 ? 1 :
+                        decay < 1.5 ? 2 :
+                        decay < 2.2 ? 3 :
+                        decay < 3.0 ? 4 : 5
+                        
+        let coreSize: CGFloat = 12 + (CGFloat(decay) * 3)
+        
+        return ZStack {
+            // The central sound source
+            Circle()
+                .fill(filter.dominant)
+                .frame(width: coreSize, height: coreSize)
+            
+            // Expanding reverberation rings to represent room size
+            if ringCount > 0 {
+                ForEach(1...ringCount, id: \.self) { i in
+                    Circle()
+                        .stroke(filter.dominant.opacity(max(0.1, 0.7 - (Double(i) * 0.12))), lineWidth: 1.5)
+                        .frame(width: coreSize + CGFloat(i * 10), height: coreSize + CGFloat(i * 10))
+                }
+            }
+        }
+        .frame(width: 54, height: 54)
     }
 }

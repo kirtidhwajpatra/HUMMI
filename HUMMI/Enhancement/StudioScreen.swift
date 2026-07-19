@@ -96,8 +96,22 @@ struct StudioScreen: View {
                 .frame(maxWidth: 300)
                 .frame(height: 150)
             playbackControls
+            headphoneBanner.padding(.top, Spacing.xs)
         }
         .padding(.horizontal, Spacing.l)
+    }
+
+    private var headphoneBanner: some View {
+        HStack(spacing: Spacing.xs) {
+            Image(systemName: "headphones")
+                .font(.caption.weight(.medium))
+            Text("Use headphones for the best studio experience")
+                .font(.caption.weight(.medium))
+        }
+        .foregroundStyle(.white)
+        .padding(.horizontal, Spacing.m)
+        .padding(.vertical, 8)
+        .background(Color.white.opacity(0.15), in: Capsule())
     }
 
     private var abToggle: some View {

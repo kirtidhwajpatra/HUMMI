@@ -16,7 +16,9 @@ struct AuroraBackground: View {
     @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
-        (colorScheme == .dark ? Color.black : Color.white)
+        Color(uiColor: UIColor { traits in 
+            traits.userInterfaceStyle == .dark ? UIColor(white: 0.04, alpha: 1.0) : UIColor(white: 0.96, alpha: 1.0) 
+        })
             .overlay(
                 RadialGradient(
                     colors: [Brand.lime.opacity(0.10 + 0.20 * Double(min(energy * 2.5, 1))), .clear],
