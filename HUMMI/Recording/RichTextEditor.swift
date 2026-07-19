@@ -105,6 +105,8 @@ struct RichTextEditor: UIViewRepresentable {
         textView.backgroundColor = .clear
         textView.font = UIFont.systemFont(ofSize: 18)
         textView.textColor = UIColor.label
+        textView.textContainerInset = .zero
+        textView.textContainer.lineFragmentPadding = 0
         
         if !rtfData.isEmpty, let attrStr = try? NSAttributedString(data: rtfData, options: [.documentType: NSAttributedString.DocumentType.rtf], documentAttributes: nil) {
             textView.attributedText = attrStr

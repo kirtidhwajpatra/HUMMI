@@ -7,6 +7,35 @@ import AVFoundation
 import Foundation
 import Observation
 
+/// Deliberately conservative noise-cleanup presets. The upper bound is kept
+/// below a fully-wet denoiser because fully replacing a singing voice with ML
+/// output is where metallic consonants and warbling most often appear.
+nonisolated enum NoiseReductionLevel: Double, CaseIterable, Identifiable {
+    case off = 0
+    case gentle = 0.22
+    case balanced = 0.42
+    case strong = 0.72
+
+    var id: Double { rawValue }
+    var title: String {
+        switch self {
+        case .off: "Off"
+        case .gentle: "Gentle"
+        case .balanced: "Balanced"
+        case .strong: "Strong"
+        }
+    }
+
+    var detail: String {
+        switch self {
+        case .off: "Original"
+        case .gentle: "Soft room"
+        case .balanced: "Everyday"
+        case .strong: "Noisy room"
+        }
+    }
+}
+
 /// Owns the Studio session. Preview settings are applied to the live graph;
 /// `renderFinalStudioVersion` is the sole path that runs the full pipeline.
 @MainActor
@@ -28,7 +57,9 @@ final class ResultViewModel {
     private(set) var filterTapCount = 0
     var autotuneStrength = 0.0
     var reverbAmount = 0.0
-    var noiseRemoval = 1.0
+    /// 0…0.75. This feeds the actual DFN dry/wet blend used for both the
+    /// Studio audition and the saved file; it is never a cosmetic control.
+    var noiseRemoval = NoiseReductionLevel.off.rawValue
     var warmth = 0.0
     var voiceSpeed = 1.0
     var voiceTempo = 1.0
@@ -46,8 +77,13 @@ final class ResultViewModel {
     private var enhancedBaseURL: URL?
     private var progressTicker: Task<Void, Never>?
     private var autotunePreviewTask: Task<Void, Never>?
+    private var noiseReductionTask: Task<Void, Never>?
     private var originalSamples: [Float]?
+    private var noiseReducedSamples: [Float]?
     private var previewedAutotune = 0.0
+    private var previewedNoiseRemoval = NoiseReductionLevel.off.rawValue
+    private var noiseRenderRevision = 0
+    private(set) var isUpdatingNoiseReduction = false
     private var enhanceStart: Date?
     private var lastMLFraction = 0.0
 
@@ -92,7 +128,12 @@ final class ResultViewModel {
         }
     }
 
-    func tearDown() { progressTicker?.cancel(); autotunePreviewTask?.cancel(); abPlayer.unload() }
+    func tearDown() {
+        progressTicker?.cancel()
+        autotunePreviewTask?.cancel()
+        noiseReductionTask?.cancel()
+        abPlayer.unload()
+    }
 
     /// Opens Studio on the original audio. ML enhancement is deliberately
     /// excluded from the realtime path until it can pass device listening QA.
@@ -103,6 +144,8 @@ final class ResultViewModel {
         do {
             try abPlayer.load(original: originalURL, enhancedBase: originalURL)
             previewedAutotune = 0  // load replaced any autotuned studio buffer
+            previewedNoiseRemoval = 0
+            noiseReducedSamples = nil
             abPlayer.listeningToProcessed = true
             phase = .ready
             applyRealtimePreview()
@@ -169,7 +212,7 @@ final class ResultViewModel {
             self.isTuningPreview = true
             defer { self.isTuningPreview = false }
             do {
-                let original = try await self.cachedOriginalSamples()
+                let original = try await self.previewBaseSamples()
                 let strength = self.autotuneStrength
                 let tuned = strength > 0
                     ? try await Self.pitchCorrected(original, strength: strength)
@@ -190,7 +233,64 @@ final class ResultViewModel {
         return samples
     }
 
-    func resetToPreset() { resetCharacterControls(); resetSpaceControls() }
+    /// Changes the cleanup setting and schedules one debounced offline ML
+    /// pass. Rendering only at the end of a slider gesture avoids a backlog
+    /// of Core ML work while the user drags.
+    func selectNoiseReduction(_ level: NoiseReductionLevel) {
+        noiseRemoval = level.rawValue
+        scheduleNoiseReductionPreview()
+    }
+
+    func scheduleNoiseReductionPreview() {
+        guard abPlayer.isLoaded else { return }
+        noiseRenderRevision += 1
+        let revision = noiseRenderRevision
+        let requestedStrength = noiseRemoval
+        noiseReductionTask?.cancel()
+        noiseReductionTask = Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .milliseconds(180))
+            guard let self, !Task.isCancelled else { return }
+            self.isUpdatingNoiseReduction = true
+            defer {
+                if self.noiseRenderRevision == revision {
+                    self.isUpdatingNoiseReduction = false
+                }
+            }
+            do {
+                let original = try await self.cachedOriginalSamples()
+                let reduced = try await Self.reduceNoise(original, strength: requestedStrength)
+                guard !Task.isCancelled, self.noiseRenderRevision == revision else { return }
+                self.noiseReducedSamples = requestedStrength > 0 ? reduced : nil
+                self.previewedNoiseRemoval = requestedStrength
+
+                let base = self.noiseReducedSamples ?? original
+                let studio = self.autotuneStrength > 0
+                    ? try await Self.pitchCorrected(base, strength: self.autotuneStrength)
+                    : base
+                guard !Task.isCancelled, self.noiseRenderRevision == revision else { return }
+                self.abPlayer.replaceStudioSamples(studio)
+                self.previewedAutotune = self.autotuneStrength
+            } catch {
+                guard !Task.isCancelled, self.noiseRenderRevision == revision else { return }
+                self.errorMessage = "Noise cleanup could not be applied: \(error.localizedDescription)"
+            }
+        }
+    }
+
+    private func previewBaseSamples() async throws -> [Float] {
+        if abs(previewedNoiseRemoval - noiseRemoval) < 0.001,
+           let noiseReducedSamples {
+            return noiseReducedSamples
+        }
+        return try await cachedOriginalSamples()
+    }
+
+    func resetToPreset() {
+        resetCharacterControls()
+        resetSpaceControls()
+        noiseRemoval = NoiseReductionLevel.off.rawValue
+        scheduleNoiseReductionPreview()
+    }
 
     func resetVoiceShape() { voiceSpeed = 1; voiceTempo = 1; voicePitch = 0; applyRealtimePreview() }
 
@@ -199,8 +299,16 @@ final class ResultViewModel {
     func renderFinalStudioVersion() async -> Bool {
         guard !isSavingStudio else { return false }
         isSavingStudio = true
-        defer { isSavingStudio = false }
+        ToastManager.shared.show(message: "Processing audio...", icon: "waveform", isProcessing: true)
+        defer { 
+            isSavingStudio = false 
+            ToastManager.shared.hide()
+        }
         do {
+            if abs(previewedNoiseRemoval - noiseRemoval) > 0.001 {
+                scheduleNoiseReductionPreview()
+            }
+            if let pending = noiseReductionTask { await pending.value }
             // The export renders the studio buffer, so a pending autotune
             // preview must land first or the save would miss it.
             scheduleAutotunePreview()
@@ -219,6 +327,7 @@ final class ResultViewModel {
         if currentURL == nil, !(await renderFinalStudioVersion()) { return }
         guard let currentURL else { return }
         isExporting = true; defer { isExporting = false }
+        ToastManager.shared.show(message: "Preparing audio...", isProcessing: true)
         do {
             let format = UserDefaults.standard.string(forKey: "exportFormat") ?? ExportFormat.m4a.rawValue
             let output = exportURL(extension: format == ExportFormat.wav.rawValue ? "wav" : "m4a")
@@ -226,7 +335,11 @@ final class ResultViewModel {
             if format == ExportFormat.wav.rawValue { try FileManager.default.copyItem(at: currentURL, to: output) }
             else { try await AudioExporter.exportM4A(from: currentURL, to: output) }
             shareItem = ShareItem(url: output)
-        } catch { errorMessage = error.localizedDescription }
+            ToastManager.shared.show(message: "Audio prepared", icon: "checkmark.circle.fill")
+        } catch { 
+            errorMessage = error.localizedDescription 
+            ToastManager.shared.hide()
+        }
     }
 
     func shareVideo() async {
@@ -235,6 +348,7 @@ final class ResultViewModel {
         guard let currentURL else { return }
         isExporting = true; videoProgress = 0
         defer { isExporting = false; videoProgress = nil }
+        ToastManager.shared.show(message: "Preparing video...", isProcessing: true)
         do {
             let output = exportURL(extension: "mp4")
             try await VideoExporter.exportMP4(audioURL: currentURL, peaks: peaks, duration: duration,
@@ -242,7 +356,11 @@ final class ResultViewModel {
                 Task { @MainActor in self?.videoProgress = progress }
             }
             shareItem = ShareItem(url: output)
-        } catch { errorMessage = error.localizedDescription }
+            ToastManager.shared.show(message: "Video prepared", icon: "checkmark.circle.fill")
+        } catch { 
+            errorMessage = error.localizedDescription 
+            ToastManager.shared.hide()
+        }
     }
 
     func toggleRemoveWatermark() { pro.isPro ? { removeWatermark.toggle() }() : { paywallReason = .removeWatermark }() }
@@ -320,6 +438,14 @@ final class ResultViewModel {
         var p = PresetParameters()
         p.pitchCorrectionStrength = strength
         return try PitchCorrectionStage(parameters: p).process(samples)
+    }
+
+    @concurrent private static func reduceNoise(_ samples: [Float], strength: Double) async throws -> [Float] {
+        guard strength > 0 else { return samples }
+        var parameters = PresetParameters.default
+        parameters.mlEnhanceDryWet = min(max(strength, 0), NoiseReductionLevel.strong.rawValue)
+        parameters.mlVocalWetCeiling = 0.55
+        return try MLEnhanceStage(parameters: parameters).process(samples)
     }
 
     @concurrent private static func loadMetadata(_ url: URL) async -> (peaks: [Float], duration: TimeInterval) {

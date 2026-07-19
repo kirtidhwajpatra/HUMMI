@@ -14,11 +14,7 @@ import UIKit
 enum StudioTheme {
     /// Light: the brand's off-white canvas. Dark: near-black with a hint
     /// of warmth — never pure black.
-    static let canvas = Color(uiColor: UIColor { traits in
-        traits.userInterfaceStyle == .dark
-            ? UIColor(red: 10 / 255, green: 12 / 255, blue: 8 / 255, alpha: 1)
-            : UIColor(red: 244 / 255, green: 247 / 255, blue: 240 / 255, alpha: 1)
-    })
+    static let canvas = Color(.systemBackground)
     static let textPrimary = Color.primary
     static let textSecondary = Color.secondary
     static let textTertiary = Color(.tertiaryLabel)

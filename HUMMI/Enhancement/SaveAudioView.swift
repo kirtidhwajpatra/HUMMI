@@ -11,11 +11,14 @@ import SwiftUI
 
 struct SaveAudioView: View {
     @Bindable var viewModel: ResultViewModel
+    @Binding var path: [AppRoute]
     /// Opens the "All recordings" library.
     var onOpenPlaylist: () -> Void = {}
 
     var body: some View {
         VStack(spacing: 0) {
+            customTopBar
+            
             Spacer(minLength: Spacing.xl)
 
             nameField
@@ -69,11 +72,7 @@ struct SaveAudioView: View {
         }
         .frame(maxWidth: Spacing.contentMaxWidth)
         .frame(maxWidth: .infinity)
-        .background(Color.clear)
-        .navigationTitle("")
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-        }
+        .background(Color(UIColor.systemGroupedBackground))
         .sheet(item: shareBinding) { item in
             ShareSheet(url: item.url)
                 .presentationDetents([.medium, .large])
@@ -142,5 +141,40 @@ struct SaveAudioView: View {
 
     private var paywallBinding: Binding<PaywallPlaceholderView.Reason?> {
         Binding(get: { viewModel.paywallReason }, set: { viewModel.paywallReason = $0 })
+    }
+    private var customTopBar: some View {
+        HStack {
+            Button {
+                withAnimation(.spring(response: 0.45, dampingFraction: 0.8)) {
+                    _ = path.popLast()
+                }
+            } label: {
+                Image(systemName: "chevron.left")
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundStyle(Brand.ink)
+                    .frame(width: 44, height: 44)
+                    .background(Color(.systemBackground))
+                    .clipShape(Circle())
+                    .glassEffect(.regular.interactive(), in: .circle)
+            }
+            
+            Spacer()
+            
+            Button {
+                path.append(.library)
+            } label: {
+                Image(systemName: "waveform.path")
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundStyle(Brand.ink)
+                    .frame(width: 44, height: 44)
+                    .background(Color(.systemBackground))
+                    .clipShape(Circle())
+                    .glassEffect(.regular.interactive(), in: .circle)
+            }
+        }
+        .padding(.horizontal, Spacing.l)
+        .padding(.top, 16)
+        .padding(.bottom, 8)
+        .background(Color(UIColor.systemGroupedBackground))
     }
 }

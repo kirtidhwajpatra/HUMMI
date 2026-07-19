@@ -77,6 +77,18 @@ struct MLEnhanceTests {
         #expect(out == input)  // no model run at all
     }
 
+    @Test func vocalSafeMixProtectsLoudMaterialButCleansSilence() {
+        let dry: [Float] = [0, 0, 0.8, 0.8, 0.8, 0.8, 0.8]
+        let enhanced: [Float] = [1, 1, 1, 1, 1, 1, 1]
+        let output = MLEnhanceStage.mixVocalSafe(
+            enhanced: enhanced, dry: dry, dryWet: 0.8, vocalWetCeiling: 0.4)
+
+        // Noise-only material receives the requested blend; once the input
+        // envelope identifies an audible phrase, the dry vocal is protected.
+        #expect(abs(output[0] - 0.8) < 0.001)
+        #expect(output[6] < 0.7)
+    }
+
     // MARK: - Model-backed (runs hosted in the app / simulator)
 
     /// Chunked enhancement of a real clip must match a single-pass

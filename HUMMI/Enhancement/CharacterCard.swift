@@ -1,18 +1,18 @@
 //
-//  SpaceTile.swift
+//  CharacterCard.swift
 //  HUMMI
 //
-//  A space filter as a compact card, in the same system as
-//  CharacterCard: the room's colour identity in a gradient swatch disc,
-//  quiet card chrome, and an unmistakable selected state — deep forest
-//  fill with a lime ring and lime name. Both filter rows speak one
-//  selection language.
+//  A character filter as a compact card: the filter's colour identity
+//  lives in a small gradient swatch disc, the card chrome stays quiet —
+//  and selection is unmistakable: the card flips to deep forest with a
+//  lime ring, lime name, and a lime check badge. One glance answers
+//  "which voice am I wearing?".
 //
 
 import SwiftUI
 
-struct SpaceTile: View {
-    let filter: SpaceFilter
+struct CharacterCard: View {
+    let filter: CharacterFilter
     let isActive: Bool
     /// Position in the row — staggers the entrance.
     let index: Int
@@ -67,7 +67,7 @@ struct SpaceTile: View {
         }
         .animation(Motion.adaptive(Motion.standard, reduceMotion: reduceMotion), value: isActive)
         .accessibilityLabel("\(filter.name). \(filter.tagline)")
-        .accessibilityHint("Applies the \(filter.name) space filter.")
+        .accessibilityHint("Applies the \(filter.name) voice character filter.")
         .accessibilityValue(isActive ? "Selected" : "")
         .accessibilityAddTraits(isActive ? .isSelected : [])
     }

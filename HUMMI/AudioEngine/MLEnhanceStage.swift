@@ -31,6 +31,7 @@ nonisolated final class MLEnhanceStage: BufferStage {
     static let crossfadeSamples = 480
 
     private let dryWet: Double
+    private let vocalWetCeiling: Double
 
     /// Called with a 0…1 fraction after each chunk. Set by the caller
     /// before `process`; invoked on the processing thread, so hop to the
@@ -49,6 +50,7 @@ nonisolated final class MLEnhanceStage: BufferStage {
 
     init(parameters: PresetParameters) {
         self.dryWet = parameters.mlEnhanceDryWet
+        self.vocalWetCeiling = parameters.mlVocalWetCeiling
     }
 
     func process(_ samples: [Float]) throws -> [Float] {
@@ -72,8 +74,12 @@ nonisolated final class MLEnhanceStage: BufferStage {
             postprocessSeconds: accumulator.timings.postprocessSeconds,
             chunkCount: accumulator.chunkCount)
 
-        // Dry/wet mix.
-        let output = Self.mix(enhanced: enhanced, dry: samples, dryWet: dryWet)
+        // A uniform wet mix makes a denoiser audible on sustained notes. The
+        // vocal-safe blend preserves more of higher-energy material while
+        // allowing the model to work hardest in quiet/noise-only passages.
+        let output = Self.mixVocalSafe(
+            enhanced: enhanced, dry: samples, dryWet: dryWet,
+            vocalWetCeiling: vocalWetCeiling)
         progressHandler?(1)
         return output
     }
@@ -122,6 +128,44 @@ nonisolated final class MLEnhanceStage: BufferStage {
         var output = [Float](repeating: 0, count: enhanced.count)
         for i in 0..<enhanced.count {
             output[i] = wet * enhanced[i] + dryGain * dry[i]
+        }
+        return output
+    }
+
+    /// Blends denoised material without letting the model replace the body of
+    /// a sung phrase. A smoothed input envelope is intentionally used instead
+    /// of pitch detection: it also protects unvoiced consonants and works for
+    /// spoken, breathy, or imperfectly pitched takes.
+    static func mixVocalSafe(
+        enhanced: [Float], dry: [Float], dryWet: Double,
+        vocalWetCeiling: Double
+    ) -> [Float] {
+        guard enhanced.count == dry.count else {
+            return mix(enhanced: enhanced, dry: dry, dryWet: dryWet)
+        }
+        let requestedWet = Float(min(max(dryWet, 0), 1))
+        let protectedWet = min(requestedWet, Float(min(max(vocalWetCeiling, 0), 1)))
+        guard requestedWet > protectedWet else {
+            return mix(enhanced: enhanced, dry: dry, dryWet: dryWet)
+        }
+
+        // ~6 ms attack / ~100 ms release at 48 kHz. The release avoids a
+        // rapidly changing mix at syllable boundaries, a common cause of
+        // audible pumping and crackle.
+        let attack: Float = 0.0035
+        let release: Float = 0.00021
+        let floor: Float = 0.006
+        let voiceRange: Float = 0.055
+        var envelope: Float = 0
+        var output = [Float](repeating: 0, count: dry.count)
+
+        for index in dry.indices {
+            let amplitude = abs(dry[index])
+            let coefficient = amplitude > envelope ? attack : release
+            envelope += (amplitude - envelope) * coefficient
+            let vocalPresence = min(max((envelope - floor) / voiceRange, 0), 1)
+            let wet = requestedWet - (requestedWet - protectedWet) * vocalPresence
+            output[index] = enhanced[index] * wet + dry[index] * (1 - wet)
         }
         return output
     }

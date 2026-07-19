@@ -23,6 +23,7 @@ struct StudioPanelSheet: View {
                 eqSection
                 spaceSection
                 characterSection
+                cleanupSection
             }
             .scrollContentBackground(.hidden)
             .navigationTitle("Studio Panel")
@@ -47,14 +48,18 @@ struct StudioPanelSheet: View {
     private var contextHeader: some View {
         Section {
             HStack(spacing: Spacing.m) {
-                Image(systemName: viewModel.selectedCharacter.glyph)
-                    .font(.title3.weight(.semibold))
-                    .foregroundStyle(.white)
-                    .frame(width: 44, height: 44)
-                    .background(
-                        LinearGradient(colors: viewModel.selectedCharacter.colors,
-                                       startPoint: .topLeading, endPoint: .bottomTrailing),
-                        in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                // Same swatch language as the filter cards, so the panel
+                // clearly belongs to the selection it edits.
+                ZStack {
+                    Circle()
+                        .fill(LinearGradient(colors: viewModel.selectedCharacter.colors,
+                                             startPoint: .topLeading, endPoint: .bottomTrailing))
+                        .frame(width: 44, height: 44)
+                    Image(systemName: viewModel.selectedCharacter.glyph)
+                        .font(.body.weight(.semibold))
+                        .foregroundStyle(.white)
+                        .shadow(color: .black.opacity(0.25), radius: 1, y: 1)
+                }
                 VStack(alignment: .leading, spacing: 2) {
                     Text("\(viewModel.selectedCharacter.name) · \(viewModel.selectedSpace.name)")
                         .font(.headline)
@@ -132,6 +137,29 @@ struct StudioPanelSheet: View {
         }
     }
 
+    private var cleanupSection: some View {
+        Section {
+            slider("Noise Reduction", value: Binding(
+                get: { viewModel.noiseRemoval },
+                set: { 
+                    viewModel.noiseRemoval = $0
+                    viewModel.scheduleNoiseReductionPreview() 
+                }
+            ), range: 0...1, preset: 0, text: "\(format(viewModel.noiseRemoval * 100, "%.0f"))%")
+            
+            if viewModel.isUpdatingNoiseReduction {
+                HStack(spacing: Spacing.xs) {
+                    ProgressView().controlSize(.small)
+                    Text("Applying cleanup…").font(.footnote).foregroundStyle(.secondary)
+                }
+            }
+        } header: {
+            Text("Cleanup")
+        } footer: {
+            Text("Uses AI to remove background noise. Higher settings might affect vocal tone.")
+        }
+    }
+
     private func slider(
         _ label: String, value: Binding<Double>, range: ClosedRange<Double>,
         step: Double? = nil, preset: Double, text: String
@@ -163,7 +191,7 @@ struct StudioPanelSheet: View {
                     Slider(value: value, in: range)
                 }
             }
-            .tint(viewModel.selectedCharacter.dominant)
+            .tint(Brand.limeDeep)  // brand sliders, whatever the filter
             .onChange(of: value.wrappedValue) { _, _ in viewModel.applyRealtimePreview() }
         }
         .padding(.vertical, 2)

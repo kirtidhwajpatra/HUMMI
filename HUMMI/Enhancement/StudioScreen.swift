@@ -40,35 +40,35 @@ struct StudioScreen: View {
                 // Clears the floating tab pill so the panel row stays reachable.
                 .padding(.bottom, Spacing.xxl * 2.5)
             }
+            .safeAreaInset(edge: .top) {
+                Color.clear.frame(height: 60)
+            }
             .scrollIndicators(.hidden)
         }
         .opacity(entered ? 1 : 0)
         .onAppear { withAnimation(.easeOut(duration: 0.25)) { entered = true } }
-        .navigationTitle("Studio")
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbarBackground(.hidden, for: .navigationBar)
-        .toolbar {
-            ToolbarItem(placement: .topBarLeading) {
+        .overlay(alignment: .top) {
+            HStack {
                 GlowPillButton(title: "Discard", tint: Color(white: 0.4),
                                foreground: .white, feel: .destructive, compact: true) {
                     showDiscardAlert = true
                 }
-            }
-            .sharedBackgroundVisibility(.hidden)  // no system glass behind our pill
-            ToolbarItem(placement: .topBarTrailing) {
+                
+                Spacer()
+                
                 GlowPillButton(title: "Save", feel: .prominent,
                                compact: true, isBusy: viewModel.isSavingStudio,
                                busyTitle: "Saving…") {
                     Task { if await viewModel.renderFinalStudioVersion() { onSaved() } }
                 }
             }
-            .sharedBackgroundVisibility(.hidden)
+            .padding(.horizontal, Spacing.m)
+            .padding(.top, Spacing.s)
         }
-        .alert("Discard studio session?", isPresented: $showDiscardAlert) {
-            Button("Discard", role: .destructive) { onDiscard() }
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            Text("Your recording stays in your library. The filter choices here will be lost.")
+        .overlay {
+            if showDiscardAlert {
+                customDiscardAlert
+            }
         }
         .sheet(isPresented: $showPanel) {
             StudioPanelSheet(viewModel: viewModel)
@@ -92,7 +92,9 @@ struct StudioScreen: View {
     private var playbackSection: some View {
         VStack(spacing: Spacing.s) {
             abToggle.padding(.top, Spacing.m)
-            waveform.frame(height: 150)
+            waveform
+                .frame(maxWidth: 300)
+                .frame(height: 150)
             playbackControls
         }
         .padding(.horizontal, Spacing.l)
@@ -109,6 +111,8 @@ struct StudioScreen: View {
         }
         .padding(Spacing.xxs)
         .background(.ultraThinMaterial, in: Capsule())
+        // Compact: the toggle is a switch, not a banner.
+        .frame(maxWidth: 240)
         .animation(Motion.micro, value: viewModel.abPlayer.listeningToProcessed)
     }
 
@@ -184,14 +188,14 @@ struct StudioScreen: View {
         VStack(alignment: .leading, spacing: Spacing.s) {
             sectionHeader("Character", caption: viewModel.selectedCharacter.tagline)
             if !dismissedCharacterCoachmark {
-                coachPill("Tap any orb to try a voice").padding(.horizontal, Spacing.l)
+                coachPill("Tap any character to try a voice").padding(.horizontal, Spacing.l)
             }
             ScrollView(.horizontal, showsIndicators: false) {
-                LazyHStack(alignment: .top, spacing: Spacing.l) {
+                LazyHStack(alignment: .top, spacing: Spacing.s) {
                     ForEach(Array(FilterLibrary.characters.enumerated()), id: \.element.id) { index, filter in
-                        FilterOrb(filter: filter,
-                                  isActive: viewModel.selectedCharacterID == filter.id,
-                                  index: index) {
+                        CharacterCard(filter: filter,
+                                      isActive: viewModel.selectedCharacterID == filter.id,
+                                      index: index) {
                             dismissedCharacterCoachmark = true
                             viewModel.selectCharacter(filter.id)
                         } onLongPress: {
@@ -343,5 +347,83 @@ struct StudioScreen: View {
     private func timeString(_ time: Double) -> String {
         let total = Int(time.rounded(.down))
         return String(format: "%d:%02d", total / 60, total % 60)
+    }
+    private var customDiscardAlert: some View {
+        ZStack {
+            // Dimming backdrop
+            Color.black.opacity(0.3)
+                .ignoresSafeArea()
+                .onTapGesture {
+                    withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                        showDiscardAlert = false
+                    }
+                }
+            
+            // Popup Card
+            VStack(alignment: .leading, spacing: 20) {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Discard studio session?")
+                        .font(.headline)
+                        .foregroundStyle(.primary)
+                    
+                    Text("Your recording stays in your library. The filter choices here will be lost.")
+                        .font(.subheadline)
+                        .foregroundStyle(.primary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                
+                HStack(spacing: 12) {
+                    Button {
+                        withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                            showDiscardAlert = false
+                        }
+                    } label: {
+                        Text("Cancel")
+                            .font(.headline)
+                            .foregroundStyle(.black)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 14)
+                            .background(Color.red, in: Capsule())
+                    }
+                    
+                    Button {
+                        withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                            showDiscardAlert = false
+                            onDiscard()
+                        }
+                    } label: {
+                        Text("Discard")
+                            .font(.headline)
+                            .foregroundStyle(.red)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 14)
+                            .background(Color(.secondarySystemFill), in: Capsule())
+                    }
+                }
+            }
+            .padding(24)
+            .background {
+                ZStack(alignment: .top) {
+                    RoundedRectangle(cornerRadius: 32, style: .continuous)
+                        .fill(.regularMaterial)
+                    
+                    Circle()
+                        .fill(Brand.lime)
+                        .frame(width: 120, height: 120)
+                        .blur(radius: 40)
+                        .offset(y: -60)
+                        .opacity(0.6)
+                }
+                .clipShape(RoundedRectangle(cornerRadius: 32, style: .continuous))
+                .shadow(color: .black.opacity(0.15), radius: 30, y: 15)
+                .overlay {
+                    RoundedRectangle(cornerRadius: 32, style: .continuous)
+                        .stroke(Color.white.opacity(0.3), lineWidth: 1)
+                }
+            }
+            .padding(.horizontal, 32)
+            .transition(.scale(scale: 0.95).combined(with: .opacity))
+        }
+        .zIndex(100)
     }
 }

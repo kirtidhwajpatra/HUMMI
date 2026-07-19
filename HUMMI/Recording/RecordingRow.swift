@@ -29,28 +29,29 @@ struct RecordingRow: View {
                         HStack(spacing: Spacing.xs) {
                             Text(item.name)
                                 .font(.headline)
-                                .foregroundStyle(.primary)
+                                .foregroundStyle(Brand.ink)
                                 .lineLimit(1)
                             if item.isEnhanced { enhancedBadge }
                         }
                 Text(item.date, format: .dateTime.month(.abbreviated).day().year())
                     .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Brand.ink.opacity(0.5))
             }
 
             Spacer(minLength: Spacing.s)
 
                     WaveformView(
                         peaks: item.peaks,
-                        tint: item.isEnhanced ? Color.accentColor.opacity(0.8) : Color(.systemGray3),
+                        tint: Brand.ink.opacity(0.22),
                         progress: playbackProgress,
                         style: .bars,
-                        normalize: true)
+                        normalize: true,
+                        playedTint: Brand.limeDeep)
                         .frame(width: 64, height: 24)
 
                     Text(durationText)
                         .font(.subheadline.monospacedDigit())
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Brand.ink.opacity(0.5))
                 }
                 .contentShape(Rectangle())
             }
@@ -62,22 +63,20 @@ struct RecordingRow: View {
 
     private var playAffordance: some View {
         Image(systemName: isPlaying ? "pause.fill" : "play.fill")
-            .font(.footnote)
-            .foregroundStyle(.white)
+            .font(.footnote.weight(.semibold))
+            .foregroundStyle(Brand.forest)
             .frame(width: 36, height: 36)
-            .background(
-                LinearGradient(colors: [.orange, .pink], startPoint: .topLeading, endPoint: .bottomTrailing),
-                in: Circle())
-            .shadow(color: Color.pink.opacity(0.2), radius: 8, y: 3)
+            .background(Brand.limeGradient, in: Circle())
+            .shadow(color: Brand.limeDeep.opacity(0.25), radius: 8, y: 3)
             .accessibilityHidden(true)
     }
 
     private var enhancedBadge: some View {
         Image(systemName: "music.note")
             .font(.system(size: 9, weight: .bold))
-            .foregroundStyle(Color.accentColor)
+            .foregroundStyle(Brand.forest)
             .frame(width: 18, height: 18)
-            .background(Color.accentColor.opacity(0.15), in: Circle())
+            .background(Brand.lime, in: Circle())
             .accessibilityHidden(true)
     }
 

@@ -31,7 +31,6 @@ struct RecordButton: View {
                 Circle()
                     .fill(LinearGradient(colors: [Self.redTop, Self.redDeep],
                                          startPoint: .top, endPoint: .bottom))
-                    .overlay(Circle().strokeBorder(.white.opacity(0.25), lineWidth: 1))
                     .frame(width: 92, height: 92)
                 // A clean solid disc at rest; the white stop square only
                 // exists while recording.
@@ -50,6 +49,7 @@ struct RecordButton: View {
         .accessibilityLabel(isRecording ? "Stop recording" : "Record")
         .accessibilityHint(isRecording ? "Stops and opens your take" : "Starts recording immediately")
         .accessibilityAddTraits(.startsMediaSession)
+        .glassEffect(.regular.interactive(), in: .circle)
     }
 
     /// Squish + soft haptic on finger-down; a modest neutral shadow, not

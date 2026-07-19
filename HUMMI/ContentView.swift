@@ -10,6 +10,8 @@ import SwiftUI
 /// Where the app's single navigation stack can go.
 enum AppRoute: Hashable {
     case save(ResultViewModel)
+    case library
+    case settings
 }
 
 enum HomePhase: Equatable {
@@ -31,12 +33,11 @@ enum HomePhase: Equatable {
 
 struct ContentView: View {
     @AppStorage("appTheme") private var appTheme: AppTheme = .system
+    @AppStorage("appTransition") private var appTransition: AppTransition = .slide
     
     @State private var audioSession = AudioSessionManager()
     @State private var recording = RecordingViewModel()
-    @State private var selectedTab: AppTab = .record
     @State private var homePath: [AppRoute] = []
-    @State private var libraryPath: [AppRoute] = []
     @State private var homePhase: HomePhase = .idle
     @Namespace private var transition
     #if DEBUG
@@ -47,93 +48,46 @@ struct ContentView: View {
         || ProcessInfo.processInfo.arguments.contains(ProcessingTestViewModel.profileAutorunArgument)
     #endif
 
-    @State private var isNavBarVisible = true
-    @State private var navBarHideTask: Task<Void, Never>?
     @State private var showLyrics: Bool = false
 
-    private func userDidInteract() {
-        if showLyrics {
-            isNavBarVisible = false
-            return
-        }
-        if !isNavBarVisible {
-            withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
-                isNavBarVisible = true
-            }
-        }
-        navBarHideTask?.cancel()
-        navBarHideTask = Task {
-            try? await Task.sleep(nanoseconds: 3_000_000_000)
-            guard !Task.isCancelled else { return }
-            await MainActor.run {
-                withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
-                    isNavBarVisible = false
-                }
-            }
-        }
-    }
-
     var body: some View {
-        ZStack(alignment: .bottom) {
-            // Main Content Area
-            Group {
-                switch selectedTab {
-                case .record:
-                    NavigationStack(path: $homePath) {
-                        sessionContent
-                            .navigationDestination(for: AppRoute.self) { route in
-                                switch route {
-                                case .save(let rVM):
-                                    SaveAudioView(viewModel: rVM)
-                                }
-                            }
-                    }
-                case .library:
-                    NavigationStack(path: $libraryPath) {
-                        RecordingsListView(path: $libraryPath) { selectedURL in
+        ZStack {
+            sessionContent
+                .zIndex(0)
+            
+            ForEach(Array(homePath.enumerated()), id: \.offset) { index, route in
+                Group {
+                    switch route {
+                    case .save(let rVM):
+                        SaveAudioView(viewModel: rVM, path: $homePath)
+                    case .library:
+                        RecordingsListView(path: $homePath) { selectedURL in
                             let rVM = ResultViewModel(originalURL: selectedURL)
                             homePhase = .studio(rVM)
-                            selectedTab = .record
-                            libraryPath.removeAll()
+                            homePath.removeAll()
                         }
-                        .navigationDestination(for: AppRoute.self) { route in
-                            switch route {
-                            case .save(let rVM):
-                                SaveAudioView(viewModel: rVM)
-                            }
-                        }
-                    }
-                case .settings:
-                    NavigationStack {
-                        SettingsView()
+                    case .settings:
+                        SettingsView(path: $homePath)
                     }
                 }
+                .transition(appTransition.anyTransition)
+                .zIndex(Double(index + 1))
+                .id(route.hashValue)
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            
-            // Custom Floating Navigation Bar
-            if isNavBarVisible && !showLyrics {
-                FloatingNavBar(selectedTab: $selectedTab)
-                    .padding(.bottom, 0)
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
+        }
+        .animation(.spring(response: 0.45, dampingFraction: 0.8), value: homePath)
+        .overlay(alignment: .top) {
+            if ToastManager.shared.isShowing {
+                ToastView(
+                    message: ToastManager.shared.message,
+                    icon: ToastManager.shared.icon,
+                    isProcessing: ToastManager.shared.isProcessing
+                )
+                .padding(.top, Spacing.s)
+                .transition(.move(edge: .top).combined(with: .opacity))
             }
         }
         .preferredColorScheme(appTheme.colorScheme)
-        .simultaneousGesture(DragGesture(minimumDistance: 0).onChanged { _ in
-            userDidInteract()
-        })
-        .onAppear {
-            userDidInteract()
-        }
-        .onChange(of: showLyrics) { _, show in
-            if show {
-                withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
-                    isNavBarVisible = false
-                }
-            } else {
-                userDidInteract()
-            }
-        }
     }
 
     private var sessionContent: some View {
@@ -179,7 +133,10 @@ struct ContentView: View {
             _ = await audioSession.requestPermissionAndActivate()
             #if DEBUG
             if ProcessInfo.processInfo.arguments.contains("--open-recordings") {
-                selectedTab = .library
+                homePath.append(.library)
+            }
+            if ProcessInfo.processInfo.arguments.contains("--open-settings") {
+                homePath.append(.settings)
             }
             if ProcessInfo.processInfo.arguments.contains("--result-first"),
                let first = try? RecordingLibrary.listRecordings().first?.url {
@@ -222,4 +179,3 @@ struct ContentView: View {
 #Preview {
     ContentView()
 }
-

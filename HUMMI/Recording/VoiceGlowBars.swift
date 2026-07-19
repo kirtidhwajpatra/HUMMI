@@ -14,6 +14,7 @@ struct VoiceGlowBars: View {
     /// Current input level, 0…1 (RMS). Only used while recording.
     var level: CGFloat
     var isRecording: Bool
+    var isIdle: Bool = false
 
     @State private var samples: [Float] = VoiceGlowBars.flat
     @State private var pulse = false
@@ -23,8 +24,6 @@ struct VoiceGlowBars: View {
     /// One bar slot in WaveformView is 3pt bar + 2pt gap; sizing the
     /// canvas to exactly `barCount` slots keeps the graph centred.
     private static let graphWidth = CGFloat(barCount) * 5 - 2
-
-    private let tick = Timer.publish(every: 0.05, on: .main, in: .common).autoconnect()
 
     var body: some View {
         // Guideline: quiet ink at rest; the live voice uses deep dark green.
@@ -57,22 +56,33 @@ struct VoiceGlowBars: View {
                 .shadow(color: Brand.forest.opacity(isRecording ? 0.35 : 0), radius: 16)
         }
         .animation(.easeInOut(duration: 0.25), value: isRecording)
-            .onReceive(tick) { _ in
+            .onChange(of: level) { _, newLevel in
                 guard isRecording else { return }
-                advance()
+                advance(with: newLevel)
             }
             .onChange(of: isRecording) { _, recording in
-                // Every take starts from — and settles back to — zero.
-                samples = Self.flat
+                // Start fresh only when a new recording begins.
+                if recording {
+                    samples = Self.flat
+                }
+            }
+            .onChange(of: isIdle) { _, idle in
+                // Clear the frozen graph when we cancel and return to idle.
+                if idle {
+                    samples = Self.flat
+                }
             }
             .accessibilityHidden(true)
     }
 
     /// Voice-reactive scroll: sqrt emphasises quiet passages so soft
-    /// singing still moves the graph.
-    private func advance() {
-        let emphasized = sqrt(max(level, 0)) * 1.8
-        let next = Float(min(0.12 + emphasized, 1.0))
+    /// singing still moves the graph. The gain is tuned so normal singing
+    /// lands mid-frame, and the cap keeps headroom above every bar —
+    /// the old ×1.8 curve clamped real vocals to 1.0 and the graph
+    /// rendered as a flat-topped block touching the frame edges.
+    private func advance(with currentLevel: CGFloat) {
+        let emphasized = sqrt(max(currentLevel, 0)) * 1.05
+        let next = Float(min(0.08 + emphasized, 0.82))
         var updated = samples
         if updated.count >= Self.barCount { updated.removeFirst() }
         updated.append(next)

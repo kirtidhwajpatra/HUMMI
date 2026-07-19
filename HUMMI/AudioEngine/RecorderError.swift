@@ -10,6 +10,7 @@ nonisolated enum RecorderError: LocalizedError {
     case alreadyRecording
     case noInputAvailable
     case unsupportedInputFormat(String)
+    case recordingFailed(String)
     case documentsUnavailable
 
     var errorDescription: String? {
@@ -20,6 +21,8 @@ nonisolated enum RecorderError: LocalizedError {
             return "No microphone input is available right now."
         case .unsupportedInputFormat(let detail):
             return "The microphone's audio format is not supported: \(detail)."
+        case .recordingFailed(let detail):
+            return detail
         case .documentsUnavailable:
             return "Could not open the folder where recordings are saved."
         }

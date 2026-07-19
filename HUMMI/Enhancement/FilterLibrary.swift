@@ -78,19 +78,19 @@ struct SpaceFilter: Identifiable {
 
 enum FilterLibrary {
     static let characters: [CharacterFilter] = [
-        character("default", "Default", "Cleaned up, still you", "wand.and.rays",
+        character("default", "Default", "Cleaned up, still you", "waveform",
                   orb(0xF8FAFC, 0xE8EFFA, 0xDBEAFE, glow: 0x93C5FD),
                   0, 0, 1, 0, 0),
-        character("studio", "Studio", "Polished, radio-ready vocal", "sparkles",
+        character("studio", "Studio", "Polished, radio-ready vocal", "music.mic",
                   orb(0xFF6B6B, 0xE8438F, 0x7C3AED, glow: 0xE8438F),
                   1, 3, 4, 18, 0),
         character("warm", "Warm", "Cozy low-end and tape glow", "flame.fill",
                   orb(0xFCD34D, 0xF59E0B, 0xDC2626, glow: 0xF59E0B),
                   3, 0, -2, 22, 0),
-        character("bright", "Bright", "Crisp presence and air", "star.fill",
+        character("bright", "Bright", "Crisp presence and air", "sun.max.fill",
                   orb(0xE0F2FE, 0x38BDF8, 0x0EA5E9, glow: 0x38BDF8, highlight: .gloss),
                   -1, 3, 5, 4, 0),
-        character("radio", "Radio", "Broadcast midrange, kept smooth", "antenna.radiowaves.left.and.right",
+        character("radio", "Radio", "Broadcast midrange, kept smooth", "radio.fill",
                   orb(0xEF4444, 0x7F1D1D, 0x1C090B, glow: 0xEF4444),
                   -10, 8, -10, 28, 0),
         character("podcast", "Podcast", "Dense, clear spoken vocal", "mic.fill",
@@ -99,13 +99,13 @@ enum FilterLibrary {
         character("vintage", "Vintage", "Soft tape warmth and rolled-off top", "recordingtape",
                   orb(0xFCD9A5, 0xB45309, 0x78350F, glow: 0xD97706, grain: true),
                   3, -1, -7, 35, 0),
-        character("whisper", "Whisper", "Intimate breath and soft presence", "moon.fill",
+        character("whisper", "Whisper", "Intimate breath and soft presence", "moon.stars.fill",
                   orb(0xFCE7F3, 0xF9A8D4, 0xC084FC, glow: 0xF9A8D4),
                   -2, 3, 2, 4, 0),
         character("hard-tune", "Hard Tune", "Bold, snapped pop character", "tuningfork",
                   orb(0xF1F5F9, 0x7DD3FC, 0x0369A1, glow: 0x38BDF8, highlight: .gloss),
                   -1, 4, 4, 12, 0, autotune: 1),
-        character("deep", "Deep", "Full, lower and late-night", "arrowtriangle.down.fill",
+        character("deep", "Deep", "Full, lower and late-night", "water.waves",
                   orb(0x1E3A8A, 0x0F766E, 0x164E63, glow: 0x14B8A6),
                   3, -1, -3, 12, -3),
         character("chipmunk", "Chipmunk", "Playful, bright and lifted", "hare.fill",
@@ -117,13 +117,13 @@ enum FilterLibrary {
     ]
 
     static let spaces: [SpaceFilter] = [
-        space("dry", "Dry", "No room — close and direct", "minus",
+        space("dry", "Dry", "No room — close and direct", "speaker.fill",
               tile(0x374151, 0x1F2937, glow: 0x4B5563), nil, 0, 0.2, 0),
-        space("booth", "Booth", "Small, focused vocal booth", "cube",
+        space("booth", "Booth", "Small, focused vocal booth", "shippingbox.fill",
               tile(0x7F1D1D, 0x451A03, glow: 0xB91C1C), .smallRoom, 12, 0.6, 0),
-        space("studio-room", "Studio Room", "Natural, controlled room", "house.fill",
+        space("studio-room", "Studio Room", "Natural, controlled room", "music.note.house.fill",
               tile(0xF59E0B, 0x78350F, glow: 0xF59E0B), .mediumRoom, 18, 1.2, 20),
-        space("live-room", "Live Room", "Open room with depth", "rectangle.3.group.fill",
+        space("live-room", "Live Room", "Open room with depth", "hifispeaker.2.fill",
               tile(0xF97316, 0x7C2D12, glow: 0xF97316), .largeRoom, 25, 1.8, 30),
         space("hall", "Hall", "A graceful concert hall", "building.columns.fill",
               tile(0x7C3AED, 0x312E81, glow: 0x8B5CF6), .largeHall, 30, 2.4, 40),
@@ -131,7 +131,7 @@ enum FilterLibrary {
               tile(0x2563EB, 0x1E3A8A, 0x0F172A, glow: 0x3B82F6), .cathedral, 35, 3.5, 60),
         space("plate", "Plate", "Smooth vintage plate", "rectangle.inset.filled",
               tile(0xFCD34D, 0xA16207, glow: 0xEAB308, angled: true), .plate, 22, 1.6, 0),
-        space("dream", "Dream", "Ethereal shimmer and air", "cloud.sun.fill",
+        space("dream", "Dream", "Ethereal shimmer and air", "sparkles",
               tile(0xFBCFE8, 0xC4B5FD, 0xA7F3D0, glow: 0xF0ABFC), .largeHall, 32, 2.8, 45)
     ]
 

@@ -36,15 +36,15 @@ final class AudioSessionManager {
         try session.setActive(true)
     }
 
-    /// Configures the session for recording (.playAndRecord category, .measurement mode to get raw microphone signals).
+    /// Voice Memos-style capture: use the system's standard recording signal
+    /// path. `.measurement` intentionally disables Apple's normal voice
+    /// conditioning and is useful for lab measurement, not satisfying vocal
+    /// capture in a consumer app.
     static func configureForRecording() throws {
         let session = AVAudioSession.sharedInstance()
-        try session.setCategory(
-            .playAndRecord,
-            mode: .measurement,
-            options: [.defaultToSpeaker, .allowBluetoothA2DP]
-        )
+        try session.setCategory(.record, mode: .default, options: [.allowBluetoothHFP])
         try session.setPreferredSampleRate(48_000)
+        try session.setPreferredIOBufferDuration(0.005)
         try session.setActive(true)
     }
 

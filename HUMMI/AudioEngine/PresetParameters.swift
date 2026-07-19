@@ -11,6 +11,10 @@ import Foundation
 nonisolated struct PresetParameters: Sendable {
     // ML enhance stage (Stage A, chunked DFN3 + dry/wet)
     var mlEnhanceDryWet: Double = 0.9   // 1 = fully enhanced, 0 = original
+    /// Even at a high noise-reduction setting, audible vocal material is
+    /// never allowed to become mostly model output. This protects sibilants,
+    /// breathy notes, and vibrato from the artifacts a denoiser can create.
+    var mlVocalWetCeiling: Double = 0.55
 
     // DFN3 restoration stage (adaptive-floor alternate to ML enhance)
     var dfnTargetFloorDB: Double = 45

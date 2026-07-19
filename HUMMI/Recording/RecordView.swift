@@ -94,33 +94,21 @@ struct RecordView: View {
         
         return ZStack {
             AuroraBackground(energy: isRecording ? CGFloat(viewModel.rms) : 0)
+
+
             VStack(spacing: Spacing.m) {
                 if showLyrics {
                     // No masthead here — the script gets the whole canvas,
                     // full width and full height.
                     lyricsCard
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .padding(.top, 60)
                 } else {
+
                     Spacer(minLength: 0)
                     Spacer(minLength: 0)
                     statusHeader(phase: phase, rVM: rVM)
-                    if let rVM {
-                        GeometryReader { geometry in
-                            WaveformView(
-                                peaks: rVM.peaks,
-                                progress: rVM.abPlayer.isPlaying ? nil : (rVM.abPlayer.duration > 0 ? rVM.abPlayer.currentTime / rVM.abPlayer.duration : 0),
-                                live: rVM.abPlayer.isPlaying ? { rVM.abPlayer.duration > 0 ? rVM.abPlayer.currentTime / rVM.abPlayer.duration : 0 } : nil,
-                                style: .bars,
-                                playedTint: .primary
-                            )
-                        }
-                        .frame(height: 84)
-                        .padding(.horizontal, Spacing.l)
-                        .glassCard(cornerRadius: 32)
-                        .padding(.horizontal, Spacing.m)
-                    } else {
-                        VoiceGlowBars(level: CGFloat(viewModel.rms), isRecording: isRecording)
-                    }
+                    VoiceGlowBars(level: CGFloat(viewModel.rms), isRecording: isRecording, isIdle: phase == .idle)
                     Spacer(minLength: 0)
                     canvasCaption(phase: phase, rVM: rVM)
                         .padding(.bottom, Spacing.l)
@@ -138,6 +126,62 @@ struct RecordView: View {
         // stack, so toggling the script (or any content change) can
         // never shove the record and import buttons around — they only
         // ever fade while the editor has the keyboard.
+        .overlay(alignment: .top) {
+            HStack {
+                Button {
+                    path.append(.settings)
+                } label: {
+                    Image(systemName: "ellipsis")
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundStyle(Brand.ink)
+                        .frame(width: 44, height: 44)
+                        .background(Color(.systemBackground))
+                        .clipShape(Circle())
+                        .glassEffect(.regular.interactive(), in: .circle)
+                }
+                .disabled(phase != .idle || showLyrics)
+                .opacity((phase == .idle && !showLyrics) ? 1 : 0)
+                
+                Spacer()
+                
+                HStack(spacing: 12) {
+                    Button {
+                        path.append(.library)
+                    } label: {
+                        Image(systemName: "waveform.path")
+                            .font(.system(size: 18, weight: .semibold))
+                            .foregroundStyle(Brand.ink)
+                            .frame(width: 44, height: 44)
+                            .background(Color(.systemBackground))
+                            .clipShape(Circle())
+                            .glassEffect(.regular.interactive(), in: .circle)
+                    }
+                    .disabled(phase != .idle || showLyrics)
+                    .opacity((phase == .idle && !showLyrics) ? 1 : 0)
+                    
+                    Button {
+                        withAnimation(.snappy) {
+                            showLyrics.toggle()
+                            isLyricsFocused = showLyrics
+                        }
+                    } label: {
+                        Image(systemName: showLyrics ? "xmark" : "text.quote")
+                            .font(.system(size: 18, weight: .semibold))
+                            .foregroundStyle(Brand.ink)
+                            .frame(width: 62, height: 44)
+                            .background(Color(.systemBackground))
+                            .clipShape(Capsule())
+                            .glassEffect(.regular.interactive(), in: .capsule)
+                    }
+                    .opacity(phase == .idle ? 1 : 0)
+                    .disabled(phase != .idle)
+                    .accessibilityLabel(showLyrics ? "Hide script" : "Show script")
+                    .accessibilityHidden(phase != .idle)
+                }
+            }
+            .padding(.horizontal, Spacing.m)
+            .padding(.top, Spacing.s)
+        }
         .overlay(alignment: .bottom) {
             if !isLyricsFocused {
                 controlRow(phase: phase, rVM: rVM)
@@ -149,24 +193,7 @@ struct RecordView: View {
         }
         .animation(.snappy, value: isLyricsFocused)
         .animation(.snappy, value: showLyrics)
-        .toolbar {
-
-            ToolbarItem(placement: .topBarTrailing) {
-                GlowIconButton(icon: showLyrics ? "xmark" : "text.quote",
-                               label: showLyrics ? "Hide script" : "Show script",
-                               style: .quiet, feel: .quiet, isActive: false,
-                               size: CGSize(width: 62, height: 40)) {
-                    withAnimation(.snappy) {
-                        showLyrics.toggle()
-                        isLyricsFocused = showLyrics
-                    }
-                }
-                .opacity(phase == .idle ? 1 : 0)
-                .disabled(phase != .idle)
-                .accessibilityHidden(phase != .idle)
-            }
-            .sharedBackgroundVisibility(.hidden)  // no system glass behind our glass
-        }
+        .toolbarBackground(.hidden, for: .navigationBar)
     }
 
     /// Masthead: a quiet eyebrow line over rounded-heavy display type in
@@ -176,7 +203,9 @@ struct RecordView: View {
     private func statusHeader(phase: HomePhase, rVM: ResultViewModel?) -> some View {
         let isRecording = (phase == .recording)
         let isPlayback = (rVM != nil)
-        let timeText = isPlayback ? timeString(rVM!.abPlayer.currentTime) : elapsedText
+        let timeText = isPlayback 
+            ? (rVM!.abPlayer.isPlaying ? timeString(rVM!.abPlayer.currentTime) : String(format: "%.1fs", rVM!.duration))
+            : elapsedText
         
         return Text(timeText)
             .font(.system(size: 32, weight: .semibold, design: .rounded).monospacedDigit())
@@ -256,7 +285,13 @@ struct RecordView: View {
             if let rVM {
                 GlowIconButton(
                     icon: "xmark", label: "Retake",
-                    feel: .destructive, size: CGSize(width: 72, height: 50)) {
+                    tint: AnyShapeStyle(LinearGradient(
+                        colors: [Color.red.opacity(0.35), Color.red.opacity(0.12)],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )),
+                    foreground: Brand.forest,
+                    style: .quiet, feel: .destructive, size: CGSize(width: 72, height: 50)) {
                     self.phase = .idle
                 }
                 .disabled(rVM.phase != .idle)
@@ -341,13 +376,13 @@ struct RecordView: View {
                             Text("Paste your recording script")
                                 .font(.system(size: 18))
                                 .foregroundStyle(Color(.tertiaryLabel))
-                                .padding(.horizontal, Spacing.s + 5)
-                                .padding(.top, 8)
+                                .padding(.horizontal, Spacing.m)
+                                .padding(.top, Spacing.m)
                                 .allowsHitTesting(false)
                         }
                         RichTextEditor(rtfData: $lyricsData, isFocused: $isLyricsFocused, context: richTextContext)
-                            .padding(.horizontal, Spacing.s)
-                            .padding(.top, 8)
+                            .padding(.horizontal, Spacing.m)
+                            .padding(.top, Spacing.m)
                             .frame(maxWidth: .infinity, maxHeight: .infinity)
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -376,7 +411,10 @@ struct RecordView: View {
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .padding(.horizontal, Spacing.xs)
-                .transition(.move(edge: .top).combined(with: .opacity).combined(with: .scale(scale: 0.95)))
+                // A quiet crossfade: toggling the script is an in-place
+                // state change, not a screen navigation — it must never
+                // look like the routing transition.
+                .transition(.opacity)
                 .layoutPriority(1)
             }
         }

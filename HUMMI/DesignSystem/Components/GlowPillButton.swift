@@ -109,7 +109,8 @@ struct GlowPillButton: View {
                 }
             }
         }
-        .buttonStyle(GelPressStyle(tint: tint))
+        .buttonStyle(.plain)
+        .glassEffect(.regular.interactive(), in: .capsule)
         .saturation(isEnabled ? 1 : 0.25)
         .opacity(isEnabled ? 1 : 0.55)
         .onChange(of: isBusy) { was, now in
@@ -139,6 +140,8 @@ struct GlowIconButton: View {
 
     let icon: String
     let label: String
+    var tint: AnyShapeStyle? = nil
+    var foreground: Color? = nil
     var style: Style = .secondary
     var feel: ButtonFeel = .standard
     /// Toggles (like the script button) go full lime while on.
@@ -168,7 +171,9 @@ struct GlowIconButton: View {
             }
             .frame(width: size.width, height: size.height)
             .background {
-                if isActive || style == .primary {
+                if let tint {
+                    Rectangle().fill(tint)
+                } else if isActive || style == .primary {
                     Brand.forest
                 } else if style == .secondary {
                     Brand.limeGradient
@@ -188,6 +193,7 @@ struct GlowIconButton: View {
     }
 
     private var glyphStyle: AnyShapeStyle {
+        if let foreground { return AnyShapeStyle(foreground) }
         if isActive || style == .primary { return AnyShapeStyle(Brand.limeGradient) }
         if style == .secondary { return AnyShapeStyle(Brand.forest) }
         return AnyShapeStyle(Brand.ink)
@@ -202,13 +208,8 @@ private struct GelBackground<S: InsettableShape>: View {
     let progress: Double?
 
     var body: some View {
-        ZStack {
-            shape.fill(
-                LinearGradient(colors: [tint.opacity(0.85), tint],
-                               startPoint: .top, endPoint: .bottom))
-            shape.fill(  // deep core, like the reference's saturated centre
-                RadialGradient(colors: [.clear, .black.opacity(0.14)],
-                               center: .center, startRadius: 8, endRadius: 90))
+        ZStack(alignment: .leading) {
+            shape.fill(tint)
             if let progress {
                 GeometryReader { geometry in
                     Rectangle()
@@ -217,12 +218,6 @@ private struct GelBackground<S: InsettableShape>: View {
                         .animation(Motion.progress, value: progress)
                 }
             }
-            shape.inset(by: 0.8)  // gooey glossy rim
-                .strokeBorder(.white.opacity(0.8), lineWidth: 1.4)
-                .blur(radius: 1.8)
-            shape.fill(  // light catching the top
-                LinearGradient(colors: [.white.opacity(0.35), .clear],
-                               startPoint: .top, endPoint: .center))
         }
         .clipShape(shape)
     }
