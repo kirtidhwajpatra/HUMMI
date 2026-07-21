@@ -1,3 +1,4 @@
+#if DEBUG
 //
 //  SpikeTestViewModel.swift
 //  HUMMI
@@ -75,4 +76,5 @@ final class SpikeTestViewModel {
         return Double(parts.seconds) + Double(parts.attoseconds) * 1e-18
     }
 }
+#endif
 #endif

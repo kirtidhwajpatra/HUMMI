@@ -2,11 +2,11 @@
 //  AppRootView.swift
 //  HUMMI
 //
-//  The app's root: shows onboarding until it completes, then the main
-//  app. Gated by @AppStorage — onboarding is never re-shown once done.
-//  A conditional full-screen swap (rather than `.fullScreenCover`) is
-//  used so the dismiss can spring and so the main app's audio session
-//  isn't activated beneath the onboarding demo.
+//  The app's root. On launch the animated splash plays, then the tree
+//  swaps to onboarding (first run) or the main app. Onboarding is gated by
+//  @AppStorage and never re-shown once done. A conditional full-screen swap
+//  (rather than `.fullScreenCover`) is used so dismissals can spring and so
+//  the main app's audio session isn't activated beneath the onboarding demo.
 //
 
 import SwiftUI
@@ -14,10 +14,21 @@ import SwiftUI
 struct AppRootView: View {
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var showSplash = true
 
     var body: some View {
         ZStack {
-            if hasCompletedOnboarding {
+            if showSplash {
+                SplashScreen(reduceMotion: reduceMotion) {
+                    withAnimation(reduceMotion
+                        ? Motion.reducedCrossfade
+                        : .spring(response: 0.5, dampingFraction: 0.9)) {
+                        showSplash = false
+                    }
+                }
+                .transition(.opacity)
+                .zIndex(2)
+            } else if hasCompletedOnboarding {
                 ContentView()
                     .transition(.opacity)
             } else {
@@ -33,7 +44,8 @@ struct AppRootView: View {
         .onAppear(perform: applyDebugBypass)
     }
 
-    /// Headless/debug launches that drive the main app skip onboarding.
+    /// Headless/debug launches that drive the main app skip onboarding and
+    /// the splash so automation isn't blocked by the intro animation.
     private func applyDebugBypass() {
         #if DEBUG
         let bypass = ["--skip-onboarding", "--record-autorun", "--result-autorun",
@@ -44,6 +56,9 @@ struct AppRootView: View {
             hasCompletedOnboarding = false
         } else if bypass.contains(where: args.contains) {
             hasCompletedOnboarding = true
+        }
+        if args.contains("--skip-splash") || bypass.contains(where: args.contains) {
+            showSplash = false
         }
         #endif
     }

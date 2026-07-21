@@ -55,7 +55,7 @@ struct ContentView: View {
             sessionContent
                 .zIndex(0)
             
-            ForEach(Array(homePath.enumerated()), id: \.offset) { index, route in
+            ForEach(Array(homePath.enumerated()), id: \.element) { index, route in
                 Group {
                     switch route {
                     case .save(let rVM):
@@ -87,7 +87,24 @@ struct ContentView: View {
                 .transition(.move(edge: .top).combined(with: .opacity))
             }
         }
+        .overlay {
+            // Hidden while the recordings list (where playback was started) is
+            // on top — the row already shows state there; it appears once the
+            // user moves to another screen.
+            if let track = NowPlayingController.shared.track, !isLibraryOnTop {
+                DraggableMiniPlayer(track: track)
+                    .transition(.scale(scale: 0.4).combined(with: .opacity))
+            }
+        }
+        .animation(.spring(response: 0.42, dampingFraction: 0.8),
+                   value: NowPlayingController.shared.track)
         .preferredColorScheme(appTheme.colorScheme)
+    }
+
+    /// True when the recordings list is the top-most pushed screen.
+    private var isLibraryOnTop: Bool {
+        if case .library = homePath.last { return true }
+        return false
     }
 
     private var sessionContent: some View {

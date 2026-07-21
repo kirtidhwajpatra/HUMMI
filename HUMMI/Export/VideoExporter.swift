@@ -40,14 +40,14 @@ nonisolated enum VideoExporter {
 
     static func exportMP4(
         audioURL: URL, peaks: [Float], duration: TimeInterval,
-        watermark: Bool, to outputURL: URL,
+        watermark: Bool, template: VideoTemplate = .voiceNote, to outputURL: URL,
         progress: @escaping @Sendable (Double) -> Void
     ) async throws {
         try? FileManager.default.removeItem(at: outputURL)
         guard duration > 0 else { throw DFNError.audioFile("nothing to export") }
 
         let size = CGSize(width: width, height: height)
-        guard let background = makeBackground(size: size, watermark: watermark)
+        guard let background = makeBackground(size: size, watermark: watermark, template: template)
         else { throw DFNError.audioFile("could not draw the video frames") }
         let bars = downsample(peaks, to: barCount)
 
@@ -99,7 +99,7 @@ nonisolated enum VideoExporter {
         let context = VideoPumpContext(
             input: videoInput, adaptor: adaptor, pool: pool, writer: writer,
             background: background, bars: bars, duration: duration,
-            totalFrames: totalFrames, progress: progress)
+            totalFrames: totalFrames, template: template, progress: progress)
         async let videoPump: Void = pumpVideo(context)
         async let audioPump: Void = appendAudio(from: audioURL, to: audioInput)
         try await videoPump
@@ -127,6 +127,7 @@ nonisolated enum VideoExporter {
         let bars: [Float]
         let duration: TimeInterval
         let totalFrames: Int
+        let template: VideoTemplate
         let progress: @Sendable (Double) -> Void
         var frame = 0
         var finished = false
@@ -134,11 +135,14 @@ nonisolated enum VideoExporter {
         init(input: AVAssetWriterInput, adaptor: AVAssetWriterInputPixelBufferAdaptor,
              pool: CVPixelBufferPool, writer: AVAssetWriter, background: CGImage,
              bars: [Float], duration: TimeInterval, totalFrames: Int,
+             template: VideoTemplate,
              progress: @escaping @Sendable (Double) -> Void) {
             self.input = input; self.adaptor = adaptor; self.pool = pool
             self.writer = writer; self.background = background; self.bars = bars
             self.duration = duration
-            self.totalFrames = totalFrames; self.progress = progress
+            self.totalFrames = totalFrames
+            self.template = template
+            self.progress = progress
         }
     }
 
@@ -163,7 +167,7 @@ nonisolated enum VideoExporter {
                     let fraction = Double(ctx.frame) / Double(ctx.totalFrames)
                     guard let buffer = makeFrame(
                         pool: ctx.pool, background: ctx.background, bars: ctx.bars,
-                        duration: ctx.duration, progress: fraction)
+                        duration: ctx.duration, progress: fraction, template: ctx.template)
                     else {
                         ctx.finished = true
                         continuation.resume(throwing: DFNError.audioFile("could not build a video frame"))
@@ -216,7 +220,7 @@ nonisolated enum VideoExporter {
 
     private static func makeFrame(
         pool: CVPixelBufferPool, background: CGImage, bars: [Float],
-        duration: TimeInterval, progress: Double
+        duration: TimeInterval, progress: Double, template: VideoTemplate
     ) -> CVPixelBuffer? {
         var pixelBuffer: CVPixelBuffer?
         guard CVPixelBufferPoolCreatePixelBuffer(nil, pool, &pixelBuffer) == kCVReturnSuccess,
@@ -232,24 +236,30 @@ nonisolated enum VideoExporter {
                     | CGBitmapInfo.byteOrder32Little.rawValue)
         else { return nil }
 
-        // Pool buffers arrive with uninitialized memory; without this the
-        // rows the encoder pads show up as a black sliver at one edge.
         memset(base, 0,
                CVPixelBufferGetBytesPerRow(buffer) * CVPixelBufferGetHeight(buffer))
 
-        // Draw the image in IDENTITY space — CGContext.draw inside a
-        // flipped transform renders images upside-down.
         let full = CGRect(x: 0, y: 0, width: CGFloat(width), height: CGFloat(height))
         ctx.draw(background, in: full)
 
-        // Then flip to a top-left, y-down space for the vector/text layer.
         ctx.translateBy(x: 0, y: CGFloat(height))
         ctx.scaleBy(x: 1, y: -1)
 
         let time = progress * duration
-        drawPlayButton(in: ctx, time: time)
-        drawBars(in: ctx, bars: bars, progress: progress, time: time)
-        drawTimer(in: ctx, time: time)
+
+        switch template {
+        case .voiceNote:
+            drawPlayButton(in: ctx, time: time)
+            drawBars(in: ctx, bars: bars, progress: progress, time: time)
+            drawTimer(in: ctx, time: time)
+        case .minimal:
+            drawMinimalBars(in: ctx, bars: bars, progress: progress, time: time)
+            drawMinimalTimer(in: ctx, time: time)
+        case .studio:
+            drawStudioBars(in: ctx, bars: bars, progress: progress, time: time)
+            drawStudioTimer(in: ctx, time: time)
+        }
+
         return buffer
     }
 
@@ -354,11 +364,87 @@ nonisolated enum VideoExporter {
         UIGraphicsPopContext()
     }
 
+    private static func drawMinimalBars(in ctx: CGContext, bars: [Float], progress: Double, time: TimeInterval) {
+        guard !bars.isEmpty else { return }
+        let scale = 1 / max(bars.max() ?? 1, 0.05)
+        let waveWidthForMinimal: CGFloat = 800
+        let waveLeftForMinimal: CGFloat = CGFloat(width) / 2 - waveWidthForMinimal / 2
+        let centerY: CGFloat = CGFloat(height) / 2 - 80
+        let slot = waveWidthForMinimal / CGFloat(bars.count)
+        let playhead = Double(bars.count) * min(max(progress, 0), 1)
+
+        for (index, peak) in bars.enumerated() {
+            var h = max(waveHalfHeight * 2 * CGFloat(min(peak * scale, 1)), 10)
+            let distance = abs(Double(index) - playhead)
+            if distance < 1.5 {
+                h *= 1 + 0.12 * CGFloat(1 - distance / 1.5) * CGFloat(0.5 + 0.5 * sin(time * 12))
+            }
+            let played = Double(index) + 0.5 <= playhead
+            ctx.setFillColor(played ? UIColor.black.withAlphaComponent(0.85).cgColor : UIColor.black.withAlphaComponent(0.15).cgColor)
+            
+            let rect = CGRect(
+                x: waveLeftForMinimal + CGFloat(index) * slot + slot * 0.15,
+                y: centerY - h / 2,
+                width: slot * 0.70, height: h)
+            ctx.addPath(CGPath(roundedRect: rect, cornerWidth: rect.width / 2, cornerHeight: rect.width / 2, transform: nil))
+            ctx.fillPath()
+        }
+    }
+
+    private static func drawMinimalTimer(in ctx: CGContext, time: TimeInterval) {
+        let total = max(Int(time.rounded(.down)), 0)
+        let text = String(format: "%d:%02d", total / 60, total % 60)
+        UIGraphicsPushContext(ctx)
+        draw(text: text,
+             font: .monospacedDigitSystemFont(ofSize: 72, weight: .light),
+             color: .black, alpha: 0.8,
+             centeredAt: CGPoint(x: CGFloat(width) / 2, y: CGFloat(height) / 2 + 120))
+        UIGraphicsPopContext()
+    }
+
+    private static func drawStudioBars(in ctx: CGContext, bars: [Float], progress: Double, time: TimeInterval) {
+        guard !bars.isEmpty else { return }
+        let scale = 1 / max(bars.max() ?? 1, 0.05)
+        let waveWidthForStudio: CGFloat = 900
+        let waveLeftForStudio: CGFloat = CGFloat(width) / 2 - waveWidthForStudio / 2
+        let centerY: CGFloat = CGFloat(height) / 2 - 80
+        let slot = waveWidthForStudio / CGFloat(bars.count)
+        let playhead = Double(bars.count) * min(max(progress, 0), 1)
+
+        for (index, peak) in bars.enumerated() {
+            var h = max(waveHalfHeight * 3 * CGFloat(min(peak * scale, 1)), 14)
+            let distance = abs(Double(index) - playhead)
+            if distance < 1.5 {
+                h *= 1 + 0.15 * CGFloat(1 - distance / 1.5) * CGFloat(0.5 + 0.5 * sin(time * 12))
+            }
+            let played = Double(index) + 0.5 <= playhead
+            ctx.setFillColor(played ? limeTop.cgColor : limeTop.withAlphaComponent(0.2).cgColor)
+            
+            let rect = CGRect(
+                x: waveLeftForStudio + CGFloat(index) * slot + slot * 0.1,
+                y: centerY - h / 2,
+                width: slot * 0.80, height: h)
+            ctx.addPath(CGPath(roundedRect: rect, cornerWidth: rect.width / 2, cornerHeight: rect.width / 2, transform: nil))
+            ctx.fillPath()
+        }
+    }
+
+    private static func drawStudioTimer(in ctx: CGContext, time: TimeInterval) {
+        let total = max(Int(time.rounded(.down)), 0)
+        let text = String(format: "%d:%02d", total / 60, total % 60)
+        UIGraphicsPushContext(ctx)
+        draw(text: text,
+             font: .monospacedDigitSystemFont(ofSize: 84, weight: .bold),
+             color: limeTop, alpha: 0.9,
+             centeredAt: CGPoint(x: CGFloat(width) / 2, y: CGFloat(height) / 2 + 160))
+        UIGraphicsPopContext()
+    }
+
     // MARK: - Static scene
 
     /// Everything that never changes: the blurred indigo-violet gradient,
     /// the frosted glass capsule, the share circle, and the watermark.
-    private static func makeBackground(size: CGSize, watermark: Bool) -> CGImage? {
+    private static func makeBackground(size: CGSize, watermark: Bool, template: VideoTemplate) -> CGImage? {
         let format = UIGraphicsImageRendererFormat()
         format.opaque = true
         format.scale = 1
@@ -366,70 +452,97 @@ nonisolated enum VideoExporter {
             let ctx = rendererContext.cgContext
             let space = CGColorSpace(name: CGColorSpace.sRGB)
 
-            // Deep forest base — the brand canvas, brighter toward the top.
-            let base = [
-                UIColor(red: 0.13, green: 0.26, blue: 0.05, alpha: 1).cgColor,
-                UIColor(red: 0.07, green: 0.16, blue: 0.02, alpha: 1).cgColor,
-                UIColor(red: 0.10, green: 0.22, blue: 0.04, alpha: 1).cgColor,
-            ] as CFArray
-            if let gradient = CGGradient(colorsSpace: space, colors: base, locations: [0, 0.55, 1]) {
-                // The tilted axis leaves an unpainted wedge past its end
-                // point unless the gradient extends beyond both ends.
-                ctx.drawLinearGradient(
-                    gradient, start: .zero,
-                    end: CGPoint(x: size.width * 0.2, y: size.height),
-                    options: [.drawsBeforeStartLocation, .drawsAfterEndLocation])
+            switch template {
+            case .voiceNote:
+                // Deep forest base — the brand canvas, brighter toward the top.
+                let base = [
+                    UIColor(red: 0.13, green: 0.26, blue: 0.05, alpha: 1).cgColor,
+                    UIColor(red: 0.07, green: 0.16, blue: 0.02, alpha: 1).cgColor,
+                    UIColor(red: 0.10, green: 0.22, blue: 0.04, alpha: 1).cgColor,
+                ] as CFArray
+                if let gradient = CGGradient(colorsSpace: space, colors: base, locations: [0, 0.55, 1]) {
+                    ctx.drawLinearGradient(
+                        gradient, start: .zero,
+                        end: CGPoint(x: size.width * 0.2, y: size.height),
+                        options: [.drawsBeforeStartLocation, .drawsAfterEndLocation])
+                }
+
+                // Soft out-of-focus blooms — the "blurred backdrop" feel.
+                drawBloom(in: ctx, space: space,
+                          center: CGPoint(x: size.width * 0.80, y: size.height * 0.30),
+                          radius: 720,
+                          color: UIColor(red: 0.55, green: 0.85, blue: 0.32, alpha: 0.32))
+                drawBloom(in: ctx, space: space,
+                          center: CGPoint(x: size.width * 0.10, y: size.height * 0.78),
+                          radius: 820,
+                          color: UIColor(red: 0.03, green: 0.10, blue: 0.01, alpha: 0.60))
+
+                // Frosted glass capsule with a soft drop shadow.
+                let pill = UIBezierPath(roundedRect: pillRect, cornerRadius: pillRect.height / 2)
+                ctx.saveGState()
+                ctx.setShadow(offset: CGSize(width: 0, height: 26), blur: 60,
+                              color: UIColor.black.withAlphaComponent(0.28).cgColor)
+                ctx.setFillColor(UIColor(white: 1, alpha: 0.16).cgColor)
+                ctx.addPath(pill.cgPath)
+                ctx.fillPath()
+                ctx.restoreGState()
+                ctx.setStrokeColor(UIColor(white: 1, alpha: 0.30).cgColor)
+                ctx.setLineWidth(2)
+                ctx.addPath(UIBezierPath(
+                    roundedRect: pillRect.insetBy(dx: 1, dy: 1),
+                    cornerRadius: pillRect.height / 2).cgPath)
+                ctx.strokePath()
+
+                // Share circle (static decoration, upper-right of the pill).
+                let share = CGRect(
+                    x: shareCenter.x - shareDiameter / 2, y: shareCenter.y - shareDiameter / 2,
+                    width: shareDiameter, height: shareDiameter)
+                ctx.setFillColor(UIColor(white: 1, alpha: 0.20).cgColor)
+                ctx.fillEllipse(in: share)
+                ctx.setStrokeColor(UIColor.white.cgColor)
+                ctx.setLineWidth(7)
+                ctx.setLineCap(.round)
+                ctx.setLineJoin(.round)
+                ctx.beginPath()  // upward arrow
+                ctx.move(to: CGPoint(x: shareCenter.x, y: shareCenter.y + 22))
+                ctx.addLine(to: CGPoint(x: shareCenter.x, y: shareCenter.y - 22))
+                ctx.move(to: CGPoint(x: shareCenter.x - 16, y: shareCenter.y - 6))
+                ctx.addLine(to: CGPoint(x: shareCenter.x, y: shareCenter.y - 22))
+                ctx.addLine(to: CGPoint(x: shareCenter.x + 16, y: shareCenter.y - 6))
+                ctx.strokePath()
+
+            case .minimal:
+                ctx.setFillColor(UIColor(red: 0.98, green: 0.98, blue: 0.98, alpha: 1).cgColor)
+                ctx.fill(CGRect(origin: .zero, size: size))
+
+            case .studio:
+                ctx.setFillColor(forest.cgColor)
+                ctx.fill(CGRect(origin: .zero, size: size))
+                drawBloom(in: ctx, space: space,
+                          center: CGPoint(x: size.width / 2, y: size.height / 2),
+                          radius: 900,
+                          color: UIColor(red: 0.20, green: 0.35, blue: 0.10, alpha: 0.40))
             }
 
-            // Soft out-of-focus blooms — the "blurred backdrop" feel.
-            drawBloom(in: ctx, space: space,
-                      center: CGPoint(x: size.width * 0.80, y: size.height * 0.30),
-                      radius: 720,
-                      color: UIColor(red: 0.55, green: 0.85, blue: 0.32, alpha: 0.32))
-            drawBloom(in: ctx, space: space,
-                      center: CGPoint(x: size.width * 0.10, y: size.height * 0.78),
-                      radius: 820,
-                      color: UIColor(red: 0.03, green: 0.10, blue: 0.01, alpha: 0.60))
-
-            // Frosted glass capsule with a soft drop shadow.
-            let pill = UIBezierPath(roundedRect: pillRect, cornerRadius: pillRect.height / 2)
-            ctx.saveGState()
-            ctx.setShadow(offset: CGSize(width: 0, height: 26), blur: 60,
-                          color: UIColor.black.withAlphaComponent(0.28).cgColor)
-            ctx.setFillColor(UIColor(white: 1, alpha: 0.16).cgColor)
-            ctx.addPath(pill.cgPath)
-            ctx.fillPath()
-            ctx.restoreGState()
-            ctx.setStrokeColor(UIColor(white: 1, alpha: 0.30).cgColor)
-            ctx.setLineWidth(2)
-            ctx.addPath(UIBezierPath(
-                roundedRect: pillRect.insetBy(dx: 1, dy: 1),
-                cornerRadius: pillRect.height / 2).cgPath)
-            ctx.strokePath()
-
-            // Share circle (static decoration, upper-right of the pill).
-            let share = CGRect(
-                x: shareCenter.x - shareDiameter / 2, y: shareCenter.y - shareDiameter / 2,
-                width: shareDiameter, height: shareDiameter)
-            ctx.setFillColor(UIColor(white: 1, alpha: 0.20).cgColor)
-            ctx.fillEllipse(in: share)
-            ctx.setStrokeColor(UIColor.white.cgColor)
-            ctx.setLineWidth(7)
-            ctx.setLineCap(.round)
-            ctx.setLineJoin(.round)
-            ctx.beginPath()  // upward arrow
-            ctx.move(to: CGPoint(x: shareCenter.x, y: shareCenter.y + 22))
-            ctx.addLine(to: CGPoint(x: shareCenter.x, y: shareCenter.y - 22))
-            ctx.move(to: CGPoint(x: shareCenter.x - 16, y: shareCenter.y - 6))
-            ctx.addLine(to: CGPoint(x: shareCenter.x, y: shareCenter.y - 22))
-            ctx.addLine(to: CGPoint(x: shareCenter.x + 16, y: shareCenter.y - 6))
-            ctx.strokePath()
-
             if watermark {
+                let watermarkY: CGFloat
+                let watermarkColor: UIColor
+                switch template {
+                case .voiceNote:
+                    watermarkY = pillRect.maxY + 110
+                    watermarkColor = .white.withAlphaComponent(0.45)
+                case .minimal:
+                    watermarkY = size.height - 150
+                    watermarkColor = .black.withAlphaComponent(0.25)
+                case .studio:
+                    watermarkY = size.height - 150
+                    watermarkColor = .white.withAlphaComponent(0.35)
+                }
+                
                 draw(text: AppBranding.watermarkText,
                      font: .systemFont(ofSize: 40, weight: .semibold),
-                     color: .white, alpha: 0.45,
-                     centeredAt: CGPoint(x: size.width / 2, y: pillRect.maxY + 110))
+                     color: watermarkColor, alpha: 1.0,
+                     centeredAt: CGPoint(x: size.width / 2, y: watermarkY))
             }
         }
         return image.cgImage
@@ -439,13 +552,13 @@ nonisolated enum VideoExporter {
     /// Test hooks: render the static scene / one composited frame without
     /// the writer, to isolate drawing bugs from encoding bugs.
     static func debugBackgroundPNG() -> Data? {
-        makeBackground(size: CGSize(width: width, height: height), watermark: true)
+        makeBackground(size: CGSize(width: width, height: height), watermark: true, template: .voiceNote)
             .flatMap { UIImage(cgImage: $0).pngData() }
     }
 
     static func debugFramePNG(peaks: [Float], progress: Double) -> Data? {
         guard let background = makeBackground(
-            size: CGSize(width: width, height: height), watermark: true) else { return nil }
+            size: CGSize(width: width, height: height), watermark: true, template: .voiceNote) else { return nil }
         var pixelBuffer: CVPixelBuffer?
         CVPixelBufferCreate(nil, width, height, kCVPixelFormatType_32BGRA,
                             [kCVPixelBufferIOSurfacePropertiesKey: [:]] as CFDictionary,
@@ -459,7 +572,7 @@ nonisolated enum VideoExporter {
         guard let pool,
               let frame = makeFrame(pool: pool, background: background,
                                     bars: downsample(peaks, to: barCount),
-                                    duration: 3, progress: progress) else { return nil }
+                                    duration: 3, progress: progress, template: .voiceNote) else { return nil }
         _ = buffer
         let image = CIImage(cvPixelBuffer: frame)
         let context = CIContext()

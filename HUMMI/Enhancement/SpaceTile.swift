@@ -2,11 +2,11 @@
 //  SpaceTile.swift
 //  HUMMI
 //
-//  A space filter as a compact card, in the same system as
-//  CharacterCard: the room's colour identity in a gradient swatch disc,
-//  quiet card chrome, and an unmistakable selected state — deep forest
-//  fill with a lime ring and lime name. Both filter rows speak one
-//  selection language.
+//  A space filter as the same capsule chip as CharacterCard, but its
+//  leading mark is the room itself: a dark-green dot with reverberation
+//  rings that grow with the decay time. One colour, one geometry —
+//  bigger room, more rings. Selection flips the chip to forest and the
+//  emblem to lime, matching the app's secondary buttons.
 //
 
 import SwiftUI
@@ -24,28 +24,29 @@ struct SpaceTile: View {
 
     var body: some View {
         Button(action: action) {
-            VStack(spacing: Spacing.s) {
-                customSpaceIcon
+
+            
+            VStack(spacing: Spacing.m) {
+                Image(systemName: filter.glyph)
+                    .font(.system(size: 40, weight: .semibold))
+                    .foregroundStyle(Brand.ink.opacity(isActive ? 1.0 : 0.6))
+                    .contentTransition(.symbolEffect(.replace))
+
+                
                 Text(filter.name)
-                    .font(.subheadline.weight(isActive ? .bold : .medium))
-                    .foregroundStyle(StudioTheme.textPrimary)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(isActive ? Brand.ink : Brand.ink.opacity(0.8))
                     .lineLimit(1)
                     .minimumScaleFactor(0.8)
+                    .padding(.horizontal, Spacing.s)
             }
-            .frame(width: 104, height: 116)
-            .background {  // selection is a whisper: tinted fill + slim stroke
-                if isActive {
-                    Brand.limeGradient.opacity(0.15)
-                } else {
-                    Brand.ink.opacity(0.05)
-                }
+            .frame(width: 116, height: 112)
+            .background {
+                RoundedRectangle(cornerRadius: 26, style: .continuous)
+                    .fill(isActive ? Brand.lime.opacity(0.15) : Brand.ink.opacity(0.06))
             }
-            .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: 22, style: .continuous)
-                    .strokeBorder(isActive ? Brand.limeDeep : Brand.ink.opacity(0.1),
-                                  lineWidth: isActive ? 1.5 : 1))
-            .scaleEffect(isActive ? 1.02 : 1)
+            .glassEffect(.regular.interactive(), in: .rect(cornerRadius: 26, style: .continuous))
+            .scaleEffect(isActive ? 1.03 : 1)
         }
         .buttonStyle(.plain)
         .simultaneousGesture(LongPressGesture(minimumDuration: 0.45).onEnded { _ in onLongPress() })
@@ -54,7 +55,7 @@ struct SpaceTile: View {
         .onAppear {
             guard !entered else { return }
             withAnimation(Motion.adaptive(
-                Motion.standard.delay(Double(index) * 0.05), reduceMotion: reduceMotion)) {
+                Motion.standard.delay(Double(index) * 0.04), reduceMotion: reduceMotion)) {
                 entered = true
             }
         }
@@ -63,33 +64,5 @@ struct SpaceTile: View {
         .accessibilityHint("Applies the \(filter.name) space filter.")
         .accessibilityValue(isActive ? "Selected" : "")
         .accessibilityAddTraits(isActive ? .isSelected : [])
-    }
-
-    private var customSpaceIcon: some View {
-        let decay = filter.decay
-        let ringCount = decay < 0.5 ? 0 : 
-                        decay < 1.0 ? 1 :
-                        decay < 1.5 ? 2 :
-                        decay < 2.2 ? 3 :
-                        decay < 3.0 ? 4 : 5
-                        
-        let coreSize: CGFloat = 12 + (CGFloat(decay) * 3)
-        
-        return ZStack {
-            // The central sound source
-            Circle()
-                .fill(filter.dominant)
-                .frame(width: coreSize, height: coreSize)
-            
-            // Expanding reverberation rings to represent room size
-            if ringCount > 0 {
-                ForEach(1...ringCount, id: \.self) { i in
-                    Circle()
-                        .stroke(filter.dominant.opacity(max(0.1, 0.7 - (Double(i) * 0.12))), lineWidth: 1.5)
-                        .frame(width: coreSize + CGFloat(i * 10), height: coreSize + CGFloat(i * 10))
-                }
-            }
-        }
-        .frame(width: 54, height: 54)
     }
 }

@@ -2,11 +2,12 @@
 //  CharacterCard.swift
 //  HUMMI
 //
-//  A character filter as a compact card: the filter's colour identity
-//  lives in a small gradient swatch disc, the card chrome stays quiet —
-//  and selection is unmistakable: the card flips to deep forest with a
-//  lime ring, lime name, and a lime check badge. One glance answers
-//  "which voice am I wearing?".
+//  A character filter as a night orb: a deep sphere tinted with the
+//  filter's palette, lit by a luminous rim that burns hottest along one
+//  arc — like a planet catching its sun. No glyphs; the name floats in
+//  the centre of the sphere. Every filter keeps its own hue and its own
+//  light angle (seeded from its id), so the row reads as twelve small
+//  worlds. Selection adds the brand's lime ring and turns the light up.
 //
 
 import SwiftUI
@@ -22,37 +23,32 @@ struct CharacterCard: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var entered = false
 
+    private let diameter: CGFloat = 104
+
     var body: some View {
         Button(action: action) {
             VStack(spacing: Spacing.s) {
+                // The glass pill icon inspired by GlowIconButton
                 ZStack {
-                    Circle()  // minimal: plain white disc, the icon is the colour
-                        .fill(.white)
-                        .frame(width: 54, height: 54)
+                    Circle().fill(isActive ? Brand.lime.opacity(0.15) : Brand.ink.opacity(0.06))
+                    
                     Image(systemName: filter.glyph)
-                        .font(.title3.weight(.semibold))
-                        .foregroundStyle(filter.dominant)
+                        .font(.system(size: 36, weight: .semibold))
+                        .foregroundStyle(Brand.ink.opacity(isActive ? 1.0 : 0.6))
+                        .contentTransition(.symbolEffect(.replace))
                 }
+                .frame(width: 88, height: 88)
+                .glassEffect(.regular.interactive(), in: .circle)
+                .scaleEffect(isActive ? 1.05 : 1)
+
+
                 Text(filter.name)
-                    .font(.subheadline.weight(isActive ? .bold : .medium))
-                    .foregroundStyle(StudioTheme.textPrimary)
+                    .font(.caption.weight(isActive ? .bold : .semibold))
+                    .foregroundStyle(isActive ? Brand.ink : Brand.ink.opacity(0.8))
                     .lineLimit(1)
-                    .minimumScaleFactor(0.8)
+                    .minimumScaleFactor(0.7)
             }
-            .frame(width: 104, height: 116)
-            .background {  // selection is a whisper: tinted fill + slim stroke
-                if isActive {
-                    Brand.limeGradient.opacity(0.15)
-                } else {
-                    Brand.ink.opacity(0.05)
-                }
-            }
-            .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: 22, style: .continuous)
-                    .strokeBorder(isActive ? Brand.limeDeep : Brand.ink.opacity(0.1),
-                                  lineWidth: isActive ? 1.5 : 1))
-            .scaleEffect(isActive ? 1.02 : 1)
+            .frame(width: 96)
         }
         .buttonStyle(.plain)
         .simultaneousGesture(LongPressGesture(minimumDuration: 0.45).onEnded { _ in onLongPress() })
@@ -61,7 +57,7 @@ struct CharacterCard: View {
         .onAppear {
             guard !entered else { return }
             withAnimation(Motion.adaptive(
-                Motion.standard.delay(Double(index) * 0.05), reduceMotion: reduceMotion)) {
+                Motion.standard.delay(Double(index) * 0.04), reduceMotion: reduceMotion)) {
                 entered = true
             }
         }
@@ -70,5 +66,11 @@ struct CharacterCard: View {
         .accessibilityHint("Applies the \(filter.name) voice character filter.")
         .accessibilityValue(isActive ? "Selected" : "")
         .accessibilityAddTraits(isActive ? .isSelected : [])
+    }
+
+    /// Where this filter's sun sits, stable across launches.
+    private var lightAngle: Double {
+        let seed = filter.id.unicodeScalars.reduce(0) { $0 + Int($1.value) }
+        return Double((seed * 37) % 360)
     }
 }

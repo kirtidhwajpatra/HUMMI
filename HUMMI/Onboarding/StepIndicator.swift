@@ -16,7 +16,7 @@ struct StepIndicator: View {
         HStack(spacing: Spacing.xs) {
             ForEach(0..<count, id: \.self) { index in
                 Capsule(style: .continuous)
-                    .fill(index == activeIndex ? Color.accentColor : Color(.tertiaryLabel))
+                    .fill(index == activeIndex ? Brand.limeDeep : Brand.ink.opacity(0.15))
                     .frame(width: index == activeIndex ? 22 : 8, height: 8)
             }
         }

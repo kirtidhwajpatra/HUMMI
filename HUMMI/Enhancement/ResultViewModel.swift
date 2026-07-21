@@ -87,12 +87,9 @@ final class ResultViewModel {
     private var enhanceStart: Date?
     private var lastMLFraction = 0.0
 
-    private let pro = ProStore.shared
     private(set) var isExporting = false
     private(set) var videoProgress: Double?
     var shareItem: ShareItem?
-    var paywallReason: PaywallPlaceholderView.Reason?
-    var removeWatermark = false
 
     var selectedCharacter: CharacterFilter { FilterLibrary.character(id: selectedCharacterID) }
     var selectedSpace: SpaceFilter { FilterLibrary.space(id: selectedSpaceID) }
@@ -108,8 +105,6 @@ final class ResultViewModel {
     }
     /// Kept for the legacy voice-control component; adjustments now apply live.
     var isDirty: Bool { false }
-    var canExport: Bool { pro.isPro || pro.canExportForFree(duration: duration) }
-    var isPro: Bool { pro.isPro }
 
     init(originalURL: URL) {
         self.originalURL = originalURL
@@ -299,11 +294,10 @@ final class ResultViewModel {
     func renderFinalStudioVersion() async -> Bool {
         guard !isSavingStudio else { return false }
         isSavingStudio = true
-        ToastManager.shared.show(message: "Processing audio...", icon: "waveform", isProcessing: true)
-        defer { 
-            isSavingStudio = false 
-            ToastManager.shared.hide()
-        }
+        // No toast here: every caller (Studio's Save, the export screen's
+        // Save Audio / Share Video) drives its own status strip around this
+        // call, so showing one here would double up.
+        defer { isSavingStudio = false }
         do {
             if abs(previewedNoiseRemoval - noiseRemoval) > 0.001 {
                 scheduleNoiseReductionPreview()
@@ -323,7 +317,7 @@ final class ResultViewModel {
     func commitName() { RecordingNames.setName(displayName, for: originalURL) }
 
     func saveAudio() async {
-        guard !isExporting, canExport else { if !canExport { paywallReason = .longExport }; return }
+        guard !isExporting else { return }
         if currentURL == nil, !(await renderFinalStudioVersion()) { return }
         guard let currentURL else { return }
         isExporting = true; defer { isExporting = false }
@@ -343,16 +337,18 @@ final class ResultViewModel {
     }
 
     func shareVideo() async {
-        guard !isExporting, canExport else { if !canExport { paywallReason = .longExport }; return }
+        guard !isExporting else { return }
         if currentURL == nil, !(await renderFinalStudioVersion()) { return }
         guard let currentURL else { return }
         isExporting = true; videoProgress = 0
         defer { isExporting = false; videoProgress = nil }
         ToastManager.shared.show(message: "Preparing video...", isProcessing: true)
         do {
+            let templateRaw = UserDefaults.standard.string(forKey: "videoTemplate") ?? VideoTemplate.voiceNote.rawValue
+            let template = VideoTemplate(rawValue: templateRaw) ?? .voiceNote
             let output = exportURL(extension: "mp4")
             try await VideoExporter.exportMP4(audioURL: currentURL, peaks: peaks, duration: duration,
-                                               watermark: false, to: output) { [weak self] progress in
+                                               watermark: false, template: template, to: output) { [weak self] progress in
                 Task { @MainActor in self?.videoProgress = progress }
             }
             shareItem = ShareItem(url: output)
@@ -362,8 +358,6 @@ final class ResultViewModel {
             ToastManager.shared.hide()
         }
     }
-
-    func toggleRemoveWatermark() { pro.isPro ? { removeWatermark.toggle() }() : { paywallReason = .removeWatermark }() }
 
     private func resetCharacterControls() {
         let settings = selectedCharacter.settings

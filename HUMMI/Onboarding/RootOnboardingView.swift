@@ -29,42 +29,36 @@ struct RootOnboardingView: View {
         }
         #endif
         _page = State(initialValue: start)
-        _canReachPermission = State(initialValue: start >= 2)
+        _canReachPermission = State(initialValue: start >= 1)
     }
 
     var body: some View {
         VStack(spacing: 0) {
-            StepIndicator(count: 3, activeIndex: page)
+            StepIndicator(count: 2, activeIndex: page)
                 .padding(.top, Spacing.m)
                 .padding(.bottom, Spacing.xs)
 
             TabView(selection: $page) {
-                OnboardingValueScreen(
-                    isActive: page == 0,
-                    onContinue: { advance(to: 1) },
-                    onSkip: onFinish)
-                    .tag(0)
-
                 OnboardingTipScreen(
                     onContinue: {
                         canReachPermission = true
-                        advance(to: 2)
+                        advance(to: 1)
                     },
-                    onBack: { advance(to: 0) })
-                    .tag(1)
+                    onSkip: onFinish)
+                    .tag(0)
 
                 OnboardingPermissionScreen(onComplete: onFinish)
-                    .tag(2)
+                    .tag(1)
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
         }
-        .background(Color(.systemBackground))
+        .background(Brand.canvas.ignoresSafeArea())
         .sensoryFeedback(Haptic.toggle, trigger: continueTick)
         .animation(pageAnimation, value: page)
         .onChange(of: page) { _, newValue in
             // Block swiping forward into the permission screen before the
             // tip screen's Continue has been used.
-            if newValue == 2, !canReachPermission { page = 1 }
+            if newValue == 1, !canReachPermission { page = 0 }
         }
     }
 

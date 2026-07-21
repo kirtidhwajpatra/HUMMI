@@ -2,8 +2,9 @@
 //  OnboardingValueScreen.swift
 //  HUMMI
 //
-//  Screen 1 — the value promise, shown in five seconds: a self-playing
-//  before/after demo you can hear, not read about.
+//  Screen 1 — the promise, heard not read: a big brand masthead over a
+//  self-playing before/after demo. The waveform swaps every three
+//  seconds; the chips tell you which voice you're hearing.
 //
 
 import SwiftUI
@@ -21,34 +22,23 @@ struct OnboardingValueScreen: View {
 
     var body: some View {
         OnboardingLayout {
-            StudioArtwork(compact: true)
+            masthead
                 .staggered(0, appeared: appeared)
 
             demoHero
                 .staggered(1, appeared: appeared)
 
-            VStack(spacing: Spacing.s) {
-                Text("onboarding.screen1.headline")
-                    .font(.largeTitle.weight(.bold))
-                    .multilineTextAlignment(.center)
-                    .accessibilityHeadingIfPossible()
-                Text("onboarding.screen1.subhead")
-                    .font(.body)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-            }
-            .staggered(2, appeared: appeared)
-            .accessibilityElement(children: .combine)
+            Text("Record one honest take. One tap later it sounds like you rented the room, the mic and the engineer.")
+                .font(.callout)
+                .foregroundStyle(Brand.ink.opacity(0.6))
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, Spacing.s)
+                .staggered(2, appeared: appeared)
         } actions: {
-            Button {
+            GlowPillButton(title: "Continue", icon: "arrow.right", feel: .prominent) {
                 onContinue()
-            } label: {
-                Label(continueTitle, systemImage: "arrow.right")
-                    .frame(maxWidth: .infinity)
             }
-            .buttonStyle(.borderedProminent)
-            .controlSize(.large)
-            .accessibilityHint(Text("onboarding.continue.hint"))
+            .accessibilityHint(Text("Shows the next onboarding step"))
         }
         .overlay(alignment: .topTrailing) { skipButton }
         .onAppear { appeared = true; updatePlayback() }
@@ -58,7 +48,26 @@ struct OnboardingValueScreen: View {
         .onChange(of: demo.isPlayingAfter) { _, isAfter in announce(isAfter) }
     }
 
-    private var continueTitle: String { NSLocalizedString("onboarding.continue", comment: "") }
+    // MARK: - Masthead
+
+    private var masthead: some View {
+        VStack(spacing: Spacing.s) {
+            VoiceLogo(variant: .wordmark, tint: Brand.ink.opacity(0.9), height: 30)
+            VStack(spacing: 0) {
+                Text("SING IT ROUGH.")
+                    .foregroundStyle(Brand.ink)
+                Text("HEAR IT STUDIO.")
+                    .foregroundStyle(Brand.limeDeep)
+            }
+            .font(.system(size: 34, weight: .black, design: .rounded))
+            .multilineTextAlignment(.center)
+            .minimumScaleFactor(0.7)
+            .lineLimit(1)
+        }
+        .padding(.top, Spacing.m)
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(.isHeader)
+    }
 
     private var waveLive: (() -> Double)? {
         reduceMotion ? nil : { demo.currentFraction() }
@@ -71,41 +80,57 @@ struct OnboardingValueScreen: View {
 
     private var demoHero: some View {
         VStack(spacing: Spacing.m) {
-            WaveformView(peaks: demo.currentPeaks, progress: waveProgress, live: waveLive)
-                .frame(height: 120)
+            WaveformView(
+                peaks: demo.currentPeaks,
+                tint: Brand.ink.opacity(0.15),
+                progress: waveProgress,
+                live: waveLive,
+                playedTint: demo.isPlayingAfter ? Brand.limeDeep : Brand.ink.opacity(0.45))
+                .frame(height: 110)
                 .animation(Motion.standard, value: demo.isPlayingAfter)
 
             HStack(spacing: Spacing.xs) {
-                indicatorChip("onboarding.screen1.before", active: !demo.isPlayingAfter)
-                indicatorChip("onboarding.screen1.after", active: demo.isPlayingAfter)
+                indicatorChip("Before", active: !demo.isPlayingAfter)
+                indicatorChip("After", active: demo.isPlayingAfter)
             }
         }
         .padding(Spacing.m)
-        .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: Radius.sheet, style: .continuous))
+        .background(Brand.ink.opacity(0.05),
+                    in: RoundedRectangle(cornerRadius: 26, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 26, style: .continuous)
+                .strokeBorder(Brand.ink.opacity(0.1), lineWidth: 1))
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(Text("onboarding.demo.label"))
+        .accessibilityLabel(Text("Before and after demo"))
         .accessibilityValue(Text(demo.isPlayingAfter
-            ? "onboarding.demo.playingAfter" : "onboarding.demo.playingBefore"))
+            ? "Playing the studio version" : "Playing the raw recording"))
     }
 
-    private func indicatorChip(_ key: LocalizedStringKey, active: Bool) -> some View {
-        Text(key)
-            .font(.subheadline.weight(.medium))
-            .frame(maxWidth: .infinity, minHeight: 36)
-            .background(active ? AnyShapeStyle(Color.accentColor) : AnyShapeStyle(Color(.tertiarySystemFill)),
-                        in: Capsule())
-            .foregroundStyle(active ? Color.white : Color.secondary)
+    /// The brand selection inversion: the active side is forest + lime.
+    private func indicatorChip(_ label: String, active: Bool) -> some View {
+        Text(label)
+            .font(.subheadline.weight(.semibold))
+            .frame(maxWidth: .infinity, minHeight: 38)
+            .background {
+                if active {
+                    Capsule().fill(Brand.forest)
+                } else {
+                    Capsule().fill(Brand.ink.opacity(0.06))
+                }
+            }
+            .foregroundStyle(active ? Brand.lime : Brand.ink.opacity(0.6))
             .animation(Motion.micro, value: active)
     }
 
     private var skipButton: some View {
         Button(action: onSkip) {
-            Text("onboarding.skip")
-                .font(.callout)
+            Text("Skip")
+                .font(.callout.weight(.medium))
+                .foregroundStyle(Brand.ink.opacity(0.5))
                 .frame(minWidth: 44, minHeight: 44)
         }
         .padding(.trailing, Spacing.s)
-        .accessibilityHint(Text("onboarding.skip.hint"))
+        .accessibilityHint(Text("Skips onboarding"))
     }
 
     // MARK: - Playback + a11y
@@ -119,12 +144,7 @@ struct OnboardingValueScreen: View {
     }
 
     private func announce(_ isAfter: Bool) {
-        let key = isAfter ? "onboarding.demo.playingAfter" : "onboarding.demo.playingBefore"
-        AccessibilityNotification.Announcement(NSLocalizedString(key, comment: "")).post()
+        AccessibilityNotification.Announcement(
+            isAfter ? "Playing the studio version" : "Playing the raw recording").post()
     }
-}
-
-private extension View {
-    /// `.isHeader` for VoiceOver ordering (headline announced first).
-    func accessibilityHeadingIfPossible() -> some View { accessibilityAddTraits(.isHeader) }
 }

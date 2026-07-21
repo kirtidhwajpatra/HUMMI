@@ -21,7 +21,7 @@ struct RecordingsListView: View {
             ForEach(viewModel.items) { item in
                 RecordingRow(
                     item: item,
-                    isPlaying: viewModel.currentlyPlayingID == item.id,
+                    isPlaying: viewModel.currentlyPlayingID == item.id && viewModel.isAudioPlaying,
                     playbackProgress: viewModel.currentlyPlayingID == item.id ? viewModel.playbackProgress : nil,
                     onPlayTapped: { viewModel.togglePlayback(for: item) },
                     onRowTapped: { onSelect(item.url) }
@@ -62,7 +62,11 @@ struct RecordingsListView: View {
                     message: "Record a take or import an audio file.")
             }
         }
-        .background(Color(.systemBackground))
+        // Centre the list column on wide (iPad / landscape) screens; the
+        // plate behind still fills edge to edge.
+        .frame(maxWidth: Spacing.contentMaxWidth)
+        .frame(maxWidth: .infinity)
+        .background(Color(.systemBackground).ignoresSafeArea())
         .confirmationDialog(
             "Delete this recording?",
             isPresented: deleteDialogPresented,

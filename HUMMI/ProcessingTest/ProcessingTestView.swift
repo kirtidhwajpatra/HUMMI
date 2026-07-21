@@ -1,3 +1,4 @@
+#if DEBUG
 //
 //  ProcessingTestView.swift
 //  HUMMI
@@ -108,4 +109,5 @@ struct ProcessingTestView: View {
 #Preview {
     ProcessingTestView()
 }
+#endif
 #endif

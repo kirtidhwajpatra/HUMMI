@@ -35,7 +35,8 @@ struct RecordView: View {
                 studioLayout(rVM)
             }
         }
-        .frame(maxWidth: Spacing.contentMaxWidth)
+        // Full-bleed: the canvas backgrounds fill the whole screen (esp. on
+        // iPad); the content columns inside cap their own width and centre.
         .frame(maxWidth: .infinity)
         .frame(maxHeight: .infinity)
         .animation(reduceMotion ? .none : Motion.standard, value: phase)
@@ -108,6 +109,10 @@ struct RecordView: View {
             }
             .frame(maxHeight: .infinity, alignment: .top)
             .padding(.horizontal, Spacing.l)
+            // Cap + centre the content column so it stays readable on wide
+            // (iPad / landscape) screens instead of stretching edge to edge.
+            .frame(maxWidth: Spacing.contentMaxWidth)
+            .frame(maxWidth: .infinity)
             .padding(.top, Spacing.m)
             // Reserved space for the pinned control row below; while the
             // editor has the keyboard the controls are hidden, so the
@@ -173,11 +178,15 @@ struct RecordView: View {
             }
             .padding(.horizontal, Spacing.m)
             .padding(.top, Spacing.s)
+            .frame(maxWidth: Spacing.contentMaxWidth)
+            .frame(maxWidth: .infinity)
         }
         .overlay(alignment: .bottom) {
             if !isLyricsFocused {
                 controlRow(phase: phase, rVM: rVM)
                     .padding(.horizontal, Spacing.l + Spacing.s)
+                    .frame(maxWidth: Spacing.contentMaxWidth)
+                    .frame(maxWidth: .infinity)
                     // Clears the floating nav bar pill which now sits lower.
                     .padding(.bottom, 84)
                     .transition(.opacity)

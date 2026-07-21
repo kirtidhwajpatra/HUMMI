@@ -1,3 +1,4 @@
+#if DEBUG
 //
 //  SpikeTestResult.swift
 //  HUMMI
@@ -19,4 +20,5 @@ nonisolated struct SpikeTestResult: Sendable {
         processSeconds > 0 ? clipSeconds / processSeconds : 0
     }
 }
+#endif
 #endif

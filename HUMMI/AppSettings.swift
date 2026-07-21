@@ -74,6 +74,13 @@ enum ExportFormat: String, CaseIterable, Identifiable {
     var id: String { self.rawValue }
 }
 
+enum VideoTemplate: String, CaseIterable, Identifiable {
+    case voiceNote = "Voice Note"
+    case minimal = "Minimal"
+    case studio = "Studio"
+    var id: String { self.rawValue }
+}
+
 final class Haptics {
     static let shared = Haptics()
     

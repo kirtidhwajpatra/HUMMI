@@ -2,9 +2,11 @@
 //  StudioPanelSheet.swift
 //  HUMMI
 //
-//  Advanced sliders over the selected Character/Space filters. Every
-//  slider is absolute — selecting a filter seeds it with that filter's
-//  value — and shows a per-row reset back to the filter's setting.
+//  Advanced controls over the selected Character/Space filters. Each
+//  section uses the control that fits what it does — steppers for precise
+//  voice nudges, a graphic EQ for tone, level meters for "amount" values,
+//  and segmented pickers for the things that are really presets (room
+//  size, autotune, cleanup). Every control is haptic and applies live.
 //
 
 import SwiftUI
@@ -15,12 +17,18 @@ struct StudioPanelSheet: View {
 
     private var character: RealtimePreviewSettings { viewModel.selectedCharacter.settings }
 
+    // Preset lists for the segmented sections.
+    private let decayValues: [Double] = [0.4, 0.8, 1.4, 2.3, 3.5]
+    private let decayLabels = ["Small", "Medium", "Large", "Hall", "Cathedral"]
+    private let autotuneValues: [Double] = [0, 0.34, 0.67, 1.0]
+    private let autotuneLabels = ["Off", "Subtle", "Medium", "Hard"]
+
     var body: some View {
         NavigationStack {
             Form {
                 contextHeader
                 voiceSection
-                eqSection
+                toneSection
                 spaceSection
                 characterSection
                 cleanupSection
@@ -31,39 +39,38 @@ struct StudioPanelSheet: View {
             .toolbarBackground(.hidden, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    Button("Reset All") { viewModel.resetToPreset(); viewModel.applyRealtimePreview() }
-                        .disabled(!viewModel.isCustomized)
+                    Button("Reset All") {
+                        viewModel.resetToPreset(); viewModel.applyRealtimePreview()
+                        Haptics.shared.notify(.success)
+                    }
+                    .disabled(!viewModel.isCustomized)
                 }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Done") { dismiss() }.fontWeight(.semibold)
                 }
             }
         }
-        // The sheet floats as glass over the studio canvas — the orbs show
-        // through, so the panel feels like part of the same room. It
-        // follows the device appearance like the rest of the screen.
         .presentationBackground(.ultraThinMaterial)
     }
+
+    // MARK: - Header
 
     private var contextHeader: some View {
         Section {
             HStack(spacing: Spacing.m) {
-                // Same swatch language as the filter cards, so the panel
-                // clearly belongs to the selection it edits.
                 ZStack {
+                    // Brand swatch — filters carry no colour of their own.
                     Circle()
-                        .fill(LinearGradient(colors: viewModel.selectedCharacter.colors,
-                                             startPoint: .topLeading, endPoint: .bottomTrailing))
+                        .fill(Brand.limeGradient)
                         .frame(width: 44, height: 44)
                     Image(systemName: viewModel.selectedCharacter.glyph)
                         .font(.body.weight(.semibold))
-                        .foregroundStyle(.white)
-                        .shadow(color: .black.opacity(0.25), radius: 1, y: 1)
+                        .foregroundStyle(Brand.forest)
                 }
                 VStack(alignment: .leading, spacing: 2) {
                     Text("\(viewModel.selectedCharacter.name) · \(viewModel.selectedSpace.name)")
                         .font(.headline)
-                    Text("Sliders start at this filter's settings and apply live.")
+                    Text("Controls start at this filter and apply live.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -71,87 +78,95 @@ struct StudioPanelSheet: View {
         }
     }
 
+    // MARK: - Voice (steppers)
+
     private var voiceSection: some View {
         Section {
-            slider("Speed", value: $viewModel.voiceSpeed, range: 0.75...1.25,
-                   preset: character.speed, text: "×\(format(viewModel.voiceSpeed, "%.2f"))")
-            slider("Tempo", value: $viewModel.voiceTempo, range: 0.75...1.25,
-                   preset: character.tempo, text: "×\(format(viewModel.voiceTempo, "%.2f"))")
-            slider("Pitch", value: $viewModel.voicePitch, range: -12...12, step: 1,
-                   preset: character.pitch, text: "\(format(viewModel.voicePitch, "%+.0f")) st")
+            StudioStepper(label: "Speed", value: $viewModel.voiceSpeed,
+                          range: 0.75...1.25, step: 0.05, preset: character.speed,
+                          format: { "×\(String(format: "%.2f", $0))" }, onChange: apply)
+            StudioStepper(label: "Tempo", value: $viewModel.voiceTempo,
+                          range: 0.75...1.25, step: 0.05, preset: character.tempo,
+                          format: { "×\(String(format: "%.2f", $0))" }, onChange: apply)
+            StudioStepper(label: "Pitch", value: $viewModel.voicePitch,
+                          range: -12...12, step: 1, preset: character.pitch,
+                          format: { "\(String(format: "%+.0f", $0)) st" }, onChange: apply)
         } header: {
             Text("Voice")
         } footer: {
-            Text("Speed changes pitch too, like tape. Tempo keeps pitch. Pitch makes the voice deeper or lighter.")
+            Text("Speed changes pitch too, like tape. Tempo keeps pitch. Pitch shifts it in semitones.")
         }
     }
 
-    private var eqSection: some View {
+    // MARK: - Tone (graphic EQ)
+
+    private var toneSection: some View {
         Section {
-            slider("Low · 100 Hz", value: $viewModel.eqLow, range: -12...12, step: 0.5,
-                   preset: character.lowGain, text: "\(format(viewModel.eqLow, "%+.1f")) dB")
-            slider("Mid · 1 kHz", value: $viewModel.eqMid, range: -12...12, step: 0.5,
-                   preset: character.midGain, text: "\(format(viewModel.eqMid, "%+.1f")) dB")
-            slider("High · 8 kHz", value: $viewModel.eqHigh, range: -12...12, step: 0.5,
-                   preset: character.highGain, text: "\(format(viewModel.eqHigh, "%+.1f")) dB")
+            StudioEQControl(
+                low: $viewModel.eqLow, mid: $viewModel.eqMid, high: $viewModel.eqHigh,
+                presets: (character.lowGain, character.midGain, character.highGain),
+                range: -12...12, onChange: apply)
+                .padding(.vertical, Spacing.xs)
         } header: {
             Text("Tone")
         } footer: {
-            Text("Low adds body, mid adds presence, high adds air.")
+            Text("Drag a band up to boost, down to cut. Double-tap a band to reset it.")
         }
     }
+
+    // MARK: - Space (meter + rooms)
 
     private var spaceSection: some View {
         Section {
-            slider("Amount", value: $viewModel.reverbAmount, range: 0...100,
-                   preset: viewModel.selectedSpace.amount,
-                   text: "\(format(viewModel.reverbAmount, "%.0f"))%")
-            slider("Decay", value: $viewModel.reverbDecay, range: 0.2...4, step: 0.1,
-                   preset: viewModel.selectedSpace.decay,
-                   text: "\(format(viewModel.reverbDecay, "%.1f")) s")
+            StudioLevelMeter(label: "Amount", value: $viewModel.reverbAmount,
+                             range: 0...100, preset: viewModel.selectedSpace.amount,
+                             format: { "\(String(format: "%.0f", $0))%" }, onChange: apply)
+
+            StudioSegmented(label: "Room", options: decayLabels,
+                            selectedIndex: decayIndex) { i in
+                viewModel.reverbDecay = decayValues[i]; apply()
+            }
         } header: {
             Text("Space")
         } footer: {
-            Text("Amount sets how much of the room you hear; Decay resizes it, overriding the selected Space filter.")
+            Text("Amount sets how much room you hear; Room resizes it, overriding the Space filter.")
         }
     }
 
+    // MARK: - Character (meter + segmented)
+
     private var characterSection: some View {
         Section {
-            slider("Saturation", value: $viewModel.saturation, range: 0...100,
-                   preset: character.saturation,
-                   text: "\(format(viewModel.saturation, "%.0f"))%")
-            slider("Autotune", value: $viewModel.autotuneStrength, range: 0...1,
-                   preset: character.autotune,
-                   text: "\(format(viewModel.autotuneStrength * 100, "%.0f"))%")
+            StudioLevelMeter(label: "Saturation", value: $viewModel.saturation,
+                             range: 0...100, preset: character.saturation,
+                             format: { "\(String(format: "%.0f", $0))%" }, onChange: apply)
+
+            StudioSegmented(label: "Autotune", options: autotuneLabels,
+                            selectedIndex: autotuneIndex) { i in
+                viewModel.autotuneStrength = autotuneValues[i]; apply()
+            }
             if viewModel.isTuningPreview {
-                HStack(spacing: Spacing.xs) {
-                    ProgressView().controlSize(.small)
-                    Text("Tuning preview…").font(.footnote).foregroundStyle(.secondary)
-                }
+                progressRow("Tuning preview…")
             }
         } header: {
             Text("Character")
         } footer: {
-            Text("Saturation adds tape-style warmth. Autotune snaps sung notes to key — it takes a moment to preview.")
+            Text("Saturation adds tape warmth. Autotune snaps sung notes to key — it takes a moment to preview.")
         }
     }
 
+    // MARK: - Cleanup (segmented)
+
     private var cleanupSection: some View {
         Section {
-            slider("Noise Reduction", value: Binding(
-                get: { viewModel.noiseRemoval },
-                set: { 
-                    viewModel.noiseRemoval = $0
-                    viewModel.scheduleNoiseReductionPreview() 
-                }
-            ), range: 0...1, preset: 0, text: "\(format(viewModel.noiseRemoval * 100, "%.0f"))%")
-            
+            StudioSegmented(label: "Noise Reduction",
+                            options: NoiseReductionLevel.allCases.map(\.title),
+                            selectedIndex: noiseIndex) { i in
+                viewModel.noiseRemoval = NoiseReductionLevel.allCases[i].rawValue
+                viewModel.scheduleNoiseReductionPreview()
+            }
             if viewModel.isUpdatingNoiseReduction {
-                HStack(spacing: Spacing.xs) {
-                    ProgressView().controlSize(.small)
-                    Text("Applying cleanup…").font(.footnote).foregroundStyle(.secondary)
-                }
+                progressRow("Applying cleanup…")
             }
         } header: {
             Text("Cleanup")
@@ -160,43 +175,35 @@ struct StudioPanelSheet: View {
         }
     }
 
-    private func slider(
-        _ label: String, value: Binding<Double>, range: ClosedRange<Double>,
-        step: Double? = nil, preset: Double, text: String
-    ) -> some View {
-        VStack(alignment: .leading, spacing: Spacing.xxs) {
-            HStack(spacing: Spacing.xs) {
-                Text(label)
-                Spacer()
-                if abs(value.wrappedValue - preset) > 0.001 {
-                    Button {
-                        value.wrappedValue = preset
-                    } label: {
-                        Image(systemName: "arrow.counterclockwise")
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(.secondary)
-                    }
-                    .buttonStyle(.borderless)
-                    .accessibilityLabel("Reset \(label)")
-                }
-                Text(text)
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
-                    .monospacedDigit()
-            }
-            Group {
-                if let step {
-                    Slider(value: value, in: range, step: step)
-                } else {
-                    Slider(value: value, in: range)
-                }
-            }
-            .tint(Brand.limeDeep)  // brand sliders, whatever the filter
-            .onChange(of: value.wrappedValue) { _, _ in viewModel.applyRealtimePreview() }
+    // MARK: - Helpers
+
+    private func apply() { viewModel.applyRealtimePreview() }
+
+    private func progressRow(_ text: String) -> some View {
+        HStack(spacing: Spacing.xs) {
+            ProgressView().controlSize(.small)
+            Text(text).font(.footnote).foregroundStyle(.secondary)
         }
-        .padding(.vertical, 2)
-        .animation(Motion.micro, value: abs(value.wrappedValue - preset) > 0.001)
     }
 
-    private func format(_ value: Double, _ format: String) -> String { String(format: format, value) }
+    /// Nearest room bucket for the current decay time.
+    private var decayIndex: Int {
+        switch viewModel.reverbDecay {
+        case ..<0.5: 0
+        case ..<1.0: 1
+        case ..<1.8: 2
+        case ..<2.8: 3
+        default: 4
+        }
+    }
+
+    private var autotuneIndex: Int { nearestIndex(viewModel.autotuneStrength, in: autotuneValues) }
+
+    private var noiseIndex: Int {
+        nearestIndex(viewModel.noiseRemoval, in: NoiseReductionLevel.allCases.map(\.rawValue))
+    }
+
+    private func nearestIndex(_ value: Double, in options: [Double]) -> Int {
+        options.enumerated().min(by: { abs($0.1 - value) < abs($1.1 - value) })?.offset ?? 0
+    }
 }

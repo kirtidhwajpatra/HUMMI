@@ -39,6 +39,10 @@ struct StudioScreen: View {
                 }
                 // Clears the floating tab pill so the panel row stays reachable.
                 .padding(.bottom, Spacing.xxl * 2.5)
+                // Centre the controls on wide (iPad / landscape) screens; the
+                // dark canvas behind still fills edge to edge.
+                .frame(maxWidth: Spacing.contentMaxWidth)
+                .frame(maxWidth: .infinity)
             }
             .safeAreaInset(edge: .top) {
                 Color.clear.frame(height: 60)
@@ -59,11 +63,13 @@ struct StudioScreen: View {
                 GlowPillButton(title: "Save", feel: .prominent,
                                compact: true, isBusy: viewModel.isSavingStudio,
                                busyTitle: "Saving…") {
-                    Task { if await viewModel.renderFinalStudioVersion() { onSaved() } }
+                    saveStudio()
                 }
             }
             .padding(.horizontal, Spacing.m)
             .padding(.top, Spacing.s)
+            .frame(maxWidth: Spacing.contentMaxWidth)
+            .frame(maxWidth: .infinity)
         }
         .overlay {
             if showDiscardAlert {
@@ -74,7 +80,6 @@ struct StudioScreen: View {
             StudioPanelSheet(viewModel: viewModel)
                 .presentationDetents([.medium, .large])
         }
-        .overlay { if viewModel.isSavingStudio { savingOverlay } }
         .overlay(alignment: .bottom) {
             if let tooltip {
                 coachPill(tooltip)
@@ -157,7 +162,7 @@ struct StudioScreen: View {
                 progress: viewModel.abPlayer.isPlaying ? nil : (viewModel.abPlayer.duration > 0 ? viewModel.abPlayer.currentTime / viewModel.abPlayer.duration : 0),
                 live: viewModel.abPlayer.isPlaying ? { viewModel.abPlayer.duration > 0 ? viewModel.abPlayer.currentTime / viewModel.abPlayer.duration : 0 } : nil,
                 style: .bars,
-                playedTint: viewModel.abPlayer.listeningToProcessed ? viewModel.selectedCharacter.dominant : .primary,
+                playedTint: viewModel.abPlayer.listeningToProcessed ? Brand.limeDeep : .primary,
                 focusFraction: scrubFocus
             )
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -293,7 +298,7 @@ struct StudioScreen: View {
                             Text("Studio Panel").font(.headline).foregroundStyle(.primary)
                             if viewModel.isCustomized {
                                 Circle()
-                                    .fill(viewModel.selectedCharacter.dominant)
+                                    .fill(Brand.limeDeep)
                                     .frame(width: 7, height: 7)
                                     .accessibilityLabel("Custom adjustments active")
                             }
@@ -330,20 +335,22 @@ struct StudioScreen: View {
             .background(.ultraThinMaterial, in: Capsule())
     }
 
-    private var savingOverlay: some View {
-        ZStack {
-            Color.black.opacity(0.55).ignoresSafeArea()
-            VStack(spacing: Spacing.m) {
-                ZStack {
-                    Circle()
-                        .fill(viewModel.selectedCharacter.dominant.opacity(0.35))
-                        .frame(width: 120, height: 120)
-                        .blur(radius: 30)
-                    ProgressView().controlSize(.large).tint(.white)
-                }
-                Text("Saving your studio version…")
-                    .font(.callout)
-                    .foregroundStyle(.white)
+    /// Renders the final take with the shared top status strip — the same
+    /// "Preparing… / ready" toast the export screen uses — as the bridge
+    /// between Studio and the export screen. The strip carries the wait, so
+    /// we only advance once the render is done and the take is clean.
+    private func saveStudio() {
+        guard !viewModel.isSavingStudio else { return }
+        Haptics.shared.play(.light)
+        Task {
+            ToastManager.shared.show(message: "Preparing your take…", isProcessing: true)
+            let ok = await viewModel.renderFinalStudioVersion()
+            if ok {
+                ToastManager.shared.show(message: "Studio take ready", icon: "checkmark.circle.fill")
+                Haptics.shared.notify(.success)
+                onSaved()
+            } else {
+                ToastManager.shared.hide()
             }
         }
     }

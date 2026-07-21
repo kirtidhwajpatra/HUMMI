@@ -11,83 +11,23 @@ import AVFoundation
 /// metadata) off the main actor, deletes takes, and imports external audio.
 @MainActor
 @Observable
-final class RecordingsListViewModel: NSObject, AVAudioPlayerDelegate {
+final class RecordingsListViewModel {
     private(set) var items: [RecordingItem] = []
     private(set) var isLoading = false
     private(set) var isImporting = false
     var errorMessage: String?
-    
-    private var audioPlayer: AVAudioPlayer?
-    private(set) var currentlyPlayingID: RecordingItem.ID?
-    private(set) var playbackProgress: Double?
-    private var progressTicker: Task<Void, Never>?
 
-    override init() {
-        super.init()
+    // Playback is owned by the app-wide NowPlayingController so a take keeps
+    // playing (and stays controllable via the floating mini-player) after the
+    // user leaves this screen. These read straight through to it.
+    var currentlyPlayingID: RecordingItem.ID? { NowPlayingController.shared.track?.id }
+    var isAudioPlaying: Bool { NowPlayingController.shared.isPlaying }
+    var playbackProgress: Double? {
+        NowPlayingController.shared.track != nil ? NowPlayingController.shared.progress : nil
     }
 
     func togglePlayback(for item: RecordingItem) {
-        if currentlyPlayingID == item.id {
-            if let player = audioPlayer, player.isPlaying {
-                player.pause()
-                stopProgressTicker()
-                currentlyPlayingID = nil
-            } else {
-                audioPlayer?.play()
-                startProgressTicker()
-                currentlyPlayingID = item.id
-            }
-        } else {
-            audioPlayer?.stop()
-            stopProgressTicker()
-            do {
-                let urlToPlay: URL
-                if item.isEnhanced, let enhancedURL = try? EnhancementStore.url(for: item.url, preset: .studio), FileManager.default.fileExists(atPath: enhancedURL.path) {
-                    urlToPlay = enhancedURL
-                } else {
-                    urlToPlay = item.url
-                }
-                
-                let session = AVAudioSession.sharedInstance()
-                try? session.setCategory(.playback, mode: .default)
-                try? session.setActive(true)
-                
-                audioPlayer = try AVAudioPlayer(contentsOf: urlToPlay)
-                audioPlayer?.delegate = self
-                audioPlayer?.play()
-                currentlyPlayingID = item.id
-                startProgressTicker()
-            } catch {
-                errorMessage = "Playback failed: \(error.localizedDescription)"
-            }
-        }
-    }
-
-    private func startProgressTicker() {
-        stopProgressTicker()
-        progressTicker = Task { @MainActor in
-            while !Task.isCancelled {
-                if let player = audioPlayer, player.duration > 0 {
-                    playbackProgress = player.currentTime / player.duration
-                }
-                try? await Task.sleep(for: .milliseconds(50))
-            }
-        }
-    }
-
-    private func stopProgressTicker() {
-        progressTicker?.cancel()
-        progressTicker = nil
-        playbackProgress = nil
-    }
-
-    nonisolated func audioPlayerDidFinishPlaying(_ player: AVAudioPlayer, successfully flag: Bool) {
-        Task { @MainActor in
-            if self.audioPlayer == player {
-                self.currentlyPlayingID = nil
-                self.stopProgressTicker()
-            }
-        }
+        NowPlayingController.shared.play(item)
     }
 
     func load() async {

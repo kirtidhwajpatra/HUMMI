@@ -15,32 +15,29 @@ struct SaveAudioView: View {
     /// Opens the "All recordings" library.
     var onOpenPlaylist: () -> Void = {}
 
+    @FocusState private var nameFocused: Bool
+
     var body: some View {
         VStack(spacing: 0) {
             customTopBar
-            
-            Spacer(minLength: Spacing.xl)
+
+            // A capped top gap lifts the title clear of vertical centre.
+            Spacer(minLength: Spacing.l).frame(maxHeight: 64)
 
             nameField
-                .padding(.bottom, Spacing.m)
                 .padding(.horizontal, Spacing.l)
-            
-            VStack(spacing: Spacing.m) {
-                HStack(spacing: Spacing.xs) {
-                    IconTile(systemImage: "wand.and.stars",
-                             colors: [.pink, .orange], size: 24)
-                    Text("Enhanced Studio Audio")
-                }
-                .font(.subheadline.weight(.medium))
-                .foregroundStyle(Color.accentColor)
 
+            // Flexible gap: floats the player toward the screen's centre.
+            Spacer(minLength: Spacing.xl)
+
+            VStack(spacing: Spacing.m) {
                 GeometryReader { geometry in
                     WaveformView(
                         peaks: viewModel.peaks,
                         progress: viewModel.abPlayer.isPlaying ? nil : (viewModel.abPlayer.duration > 0 ? viewModel.abPlayer.currentTime / viewModel.abPlayer.duration : 0),
                         live: viewModel.abPlayer.isPlaying ? { viewModel.abPlayer.duration > 0 ? viewModel.abPlayer.currentTime / viewModel.abPlayer.duration : 0 } : nil,
                         style: .bars,
-                        playedTint: .accentColor
+                        playedTint: Brand.forest
                     )
                 }
                 .frame(height: 80)
@@ -49,14 +46,14 @@ struct SaveAudioView: View {
                     Text(timeString(viewModel.abPlayer.currentTime))
                         .font(.callout.monospacedDigit())
                         .foregroundStyle(.secondary)
-                    
+
                     GlowIconButton(
                         icon: viewModel.abPlayer.isPlaying ? "pause.fill" : "play.fill",
                         label: viewModel.abPlayer.isPlaying ? "Pause" : "Play",
                         feel: .quiet) {
                         viewModel.abPlayer.togglePlayPause()
                     }
-                    
+
                     Text(timeString(viewModel.duration))
                         .font(.callout.monospacedDigit())
                         .foregroundStyle(.secondary)
@@ -71,15 +68,13 @@ struct SaveAudioView: View {
                 .padding(.bottom, Spacing.xl)
         }
         .frame(maxWidth: Spacing.contentMaxWidth)
-        .frame(maxWidth: .infinity)
-        .background(Color(UIColor.systemGroupedBackground))
+        // Fill the whole screen so the opaque backdrop reaches every edge and
+        // the Studio screen behind never peeks through at the bottom.
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(screenBackground.ignoresSafeArea())
         .sheet(item: shareBinding) { item in
             ShareSheet(url: item.url)
                 .presentationDetents([.medium, .large])
-        }
-        .sheet(item: paywallBinding) { reason in
-            PaywallPlaceholderView(reason: reason)
-                .presentationBackground(.thinMaterial)
         }
         .onDisappear { viewModel.commitName() }
         .task {
@@ -87,18 +82,37 @@ struct SaveAudioView: View {
         }
     }
 
+    /// Screen backdrop — a near-white (or near-black) plate that fills the
+    /// whole screen, shared by the top bar so there is no seam.
+    private var screenBackground: Color {
+        Color(uiColor: UIColor { $0.userInterfaceStyle == .dark
+            ? UIColor(white: 0.04, alpha: 1.0)
+            : UIColor(red: 251/255, green: 251/255, blue: 251/255, alpha: 1.0) })
+    }
+
     // MARK: - Editable name
 
     private var nameField: some View {
-        TextField("Recording", text: $viewModel.displayName)
-            .font(.largeTitle.weight(.heavy))
-            .foregroundStyle(.primary)
-            .multilineTextAlignment(.center)
-            .textInputAutocapitalization(.words)
-            .submitLabel(.done)
-            .lineLimit(1)
-            .accessibilityLabel("Recording name")
-            .accessibilityHint("Tap to rename")
+        HStack(spacing: 3) {
+            TextField("Recording", text: $viewModel.displayName)
+                .font(.title2.weight(.medium))
+                .foregroundStyle(.primary)
+                .multilineTextAlignment(.center)
+                // Hug the text so the caret sits right at the name's end.
+                .fixedSize(horizontal: true, vertical: false)
+                .textInputAutocapitalization(.words)
+                .submitLabel(.done)
+                .lineLimit(1)
+                .focused($nameFocused)
+                .accessibilityLabel("Recording name")
+                .accessibilityHint("Tap to rename")
+
+            // A blinking cursor at the end signals the title is a text
+            // field. Hidden while focused, when the real caret takes over.
+            if !nameFocused {
+                BlinkingCaret()
+            }
+        }
     }
 
     private var exportButtons: some View {
@@ -139,9 +153,6 @@ struct SaveAudioView: View {
         Binding(get: { viewModel.shareItem }, set: { viewModel.shareItem = $0 })
     }
 
-    private var paywallBinding: Binding<PaywallPlaceholderView.Reason?> {
-        Binding(get: { viewModel.paywallReason }, set: { viewModel.paywallReason = $0 })
-    }
     private var customTopBar: some View {
         HStack {
             Button {
@@ -163,7 +174,7 @@ struct SaveAudioView: View {
             Button {
                 path.append(.library)
             } label: {
-                Image(systemName: "waveform.path")
+                Image(systemName: "folder")
                     .font(.system(size: 18, weight: .semibold))
                     .foregroundStyle(Brand.ink)
                     .frame(width: 44, height: 44)
@@ -175,6 +186,27 @@ struct SaveAudioView: View {
         .padding(.horizontal, Spacing.l)
         .padding(.top, 16)
         .padding(.bottom, 8)
-        .background(Color(UIColor.systemGroupedBackground))
+        .background(screenBackground)
+    }
+}
+
+/// A text-cursor caret that fades on and off, marking the recording title
+/// as editable. Holds steady when Reduce Motion is on.
+private struct BlinkingCaret: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var visible = true
+
+    var body: some View {
+        RoundedRectangle(cornerRadius: 1, style: .continuous)
+            .fill(Brand.limeDeep)
+            .frame(width: 2.5, height: 22)
+            .opacity(visible ? 1 : 0)
+            .onAppear {
+                guard !reduceMotion else { return }
+                withAnimation(.easeInOut(duration: 0.55).repeatForever(autoreverses: true)) {
+                    visible = false
+                }
+            }
+            .accessibilityHidden(true)
     }
 }

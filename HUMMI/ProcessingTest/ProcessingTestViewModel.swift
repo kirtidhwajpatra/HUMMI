@@ -1,3 +1,4 @@
+#if DEBUG
 //
 //  ProcessingTestViewModel.swift
 //  HUMMI
@@ -196,4 +197,5 @@ final class ProcessingTestViewModel {
         return (outputURL, seconds)
     }
 }
+#endif
 #endif

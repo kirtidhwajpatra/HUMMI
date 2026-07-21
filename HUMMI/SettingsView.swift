@@ -12,6 +12,7 @@ struct SettingsView: View {
     @Binding var path: [AppRoute]
     @AppStorage("appTheme") private var appTheme: AppTheme = .system
     @AppStorage("exportFormat") private var exportFormat: ExportFormat = .m4a
+    @AppStorage("videoTemplate") private var videoTemplate: VideoTemplate = .voiceNote
     @AppStorage("hapticsEnabled") private var hapticsEnabled: Bool = true
     @AppStorage("appTransition") private var appTransition: AppTransition = .slide
 
@@ -47,19 +48,28 @@ struct SettingsView: View {
                         Text("How screens move. Back always plays the reverse.")
                     }
 
-                    section("Audio") {
-                        row(icon: "waveform", title: "Export Format") {
+                    section("Export") {
+                        row(icon: "waveform", title: "Audio Format") {
                             Picker("", selection: $exportFormat) {
                                 ForEach(ExportFormat.allCases) { format in
-                                    // Short labels — the footer carries the detail.
                                     Text(format == .m4a ? "M4A" : "WAV").tag(format)
                                 }
                             }
                             .pickerStyle(.segmented)
                             .frame(maxWidth: 160)
                         }
+                        divider
+                        row(icon: "play.rectangle", title: "Video Layout") {
+                            Picker("", selection: $videoTemplate) {
+                                ForEach(VideoTemplate.allCases) { template in
+                                    Text(template.rawValue).tag(template)
+                                }
+                            }
+                            .tint(Brand.ink)
+                            .fixedSize()
+                        }
                     } footer: {
-                        Text("M4A keeps files small. WAV is uncompressed studio quality.")
+                        Text("Customize how your enhanced recordings are shared.")
                     }
 
                     section("Interactions") {
@@ -85,17 +95,23 @@ struct SettingsView: View {
                         Text("Permanently deletes every recording. This cannot be undone.")
                     }
 
-                    Text("HUMMI \(appVersion)")
-                        .font(.footnote)
-                        .foregroundStyle(Brand.ink.opacity(0.35))
-                        .frame(maxWidth: .infinity)
-                        .padding(.top, Spacing.m)
+                    VStack(spacing: Spacing.xs) {
+                        VoiceLogo(variant: .wordmark, tint: Brand.ink.opacity(0.4), height: 26)
+                        Text("Studio \(appVersion)")
+                            .font(.footnote)
+                            .foregroundStyle(Brand.ink.opacity(0.35))
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.top, Spacing.m)
                 }
                 .padding(.horizontal, Spacing.l)
                 .padding(.vertical, Spacing.l)
+                // Centre settings content on wide (iPad / landscape) screens.
+                .frame(maxWidth: Spacing.contentMaxWidth)
+                .frame(maxWidth: .infinity)
             }
         }
-        .background(Color(.systemBackground))
+        .background(Color(.systemBackground).ignoresSafeArea())
         .onChange(of: appTheme) { Haptics.shared.play(.light) }
         .onChange(of: appTransition) { Haptics.shared.play(.light) }
         .onChange(of: exportFormat) { Haptics.shared.play(.light) }

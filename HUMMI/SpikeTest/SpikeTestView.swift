@@ -1,3 +1,4 @@
+#if DEBUG
 //
 //  SpikeTestView.swift
 //  HUMMI
@@ -74,4 +75,5 @@ struct SpikeTestView: View {
 #Preview {
     SpikeTestView()
 }
+#endif
 #endif
